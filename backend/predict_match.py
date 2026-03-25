@@ -4,7 +4,11 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-model = joblib.load(os.path.join(BASE_DIR, "data", "ipl_model_v2.pkl"))
+try:
+    model = joblib.load(os.path.join(BASE_DIR, "data", "ipl_model_v2.pkl"))
+except Exception as e:
+    print(f"Error loading model: {e}")
+    model = None
 df = pd.read_csv(os.path.join(BASE_DIR, "data", "ipl_history.csv"))
 
 # Precompute stats
@@ -40,7 +44,10 @@ def predict_winner(team1, team2):
     # ✅ IMPORTANT: Smooth probabilities
     prob = max(0.55, min(0.75, prob))
 
-    if prob >= 0.5:
-        return team1, prob
+    if model:
+        if prob >= 0.5:
+            return team1, prob
+        else:
+            return team2, 1 - prob
     else:
-        return team2, 1 - prob
+        return team1, 0.6

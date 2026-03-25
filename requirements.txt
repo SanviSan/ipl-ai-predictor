@@ -9,3 +9,7 @@ requests
 bs4
 dotenv
 joblib
+python-multipart
+scikit-learn
+pandas
+numpy
