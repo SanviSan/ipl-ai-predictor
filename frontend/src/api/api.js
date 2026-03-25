@@ -1,5 +1,6 @@
 // frontend/src/api/api.js
 export const API_URL = process.env.REACT_APP_API_URL;
+console.log("API URL:", API_URL);
 
 export const fetchWithAuth = async (endpoint, options = {}) => {
   const token = localStorage.getItem("authToken");
