@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api/api";
 
 export default function Login() {
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" }); // ✅ Use email
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useContext(UserContext);
@@ -29,7 +29,7 @@ export default function Login() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Handle backend validation errors
+        // Handle backend validation or auth errors
         throw new Error(data.detail || "Login failed");
       }
 
@@ -51,9 +51,9 @@ export default function Login() {
       <h2>Login</h2>
       <form onSubmit={handleSubmit}>
         <input
-          placeholder="Username"
-          value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })}
+          placeholder="Email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
           style={{ display: "block", marginBottom: "10px", padding: "8px", width: "100%" }}
         />
         <input
