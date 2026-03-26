@@ -87,6 +87,8 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 
     print(f"💡 Login attempt: {db_user.email}, is_admin: {is_admin_flag}", flush=True)
 
+    print("DB user:", db_user)
+
     # Also log to INFO so you can check in logs
     logging.info(f"💡 Login attempt: {db_user.email}, is_admin: {is_admin_flag}")
 
