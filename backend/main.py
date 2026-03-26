@@ -70,6 +70,85 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     return {"message": "User registered successfully"}
 
+@app.get("/leaderboard/daily")
+def daily_winners(db: Session = Depends(get_db)):
+    try:
+        # Get latest completed match date
+        latest_match = (
+            db.query(Match)
+            .filter(Match.status == "completed")
+            .order_by(Match.match_date.desc())
+            .first()
+        )
+
+        if not latest_match:
+            return []
+
+        match_date = latest_match.match_date
+
+        # Get all matches on that date
+        matches = db.query(Match).filter(
+            Match.match_date == match_date,
+            Match.status == "completed"
+        ).all()
+
+        match_ids = [m.id for m in matches]
+
+        # Get predictions for those matches
+        predictions = db.query(Prediction).filter(
+            Prediction.match_id.in_(match_ids)
+        ).all()
+
+        # Calculate points per user for that day
+        user_points = {}
+
+        for p in predictions:
+            user_points[p.user_id] = user_points.get(p.user_id, 0) + p.points_awarded
+
+        if not user_points:
+            return []
+
+        max_points = max(user_points.values())
+
+        winners = []
+
+        for user_id, points in user_points.items():
+            if points == max_points:
+                user = db.query(User).filter(User.id == user_id).first()
+                winners.append({
+                    "name": user.name,
+                    "points": points
+                })
+
+        return winners
+
+    except Exception as e:
+        logging.error(f"Daily leaderboard error: {e}")
+        raise HTTPException(status_code=500, detail="Error fetching daily winners")
+    
+@app.get("/matches/{match_id}/winners")
+def match_winners(match_id: int, db: Session = Depends(get_db)):
+    try:
+        predictions = db.query(Prediction).filter(
+            Prediction.match_id == match_id,
+            Prediction.points_awarded > 0
+        ).all()
+
+        winners = []
+
+        for p in predictions:
+            user = db.query(User).filter(User.id == p.user_id).first()
+            winners.append({
+                "name": user.name,
+                "points": p.points_awarded
+            })
+
+        return winners
+
+    except Exception as e:
+        logging.error(f"Match winners error: {e}")
+        raise HTTPException(status_code=500, detail="Error fetching match winners")
+
 # -------------------------
 # AUTH - LOGIN
 # -------------------------
@@ -306,17 +385,29 @@ def update_match_result(
     match.status = "completed"
     match.winner_team_id = winner_team_id
 
-    # ✅ Score all predictions
-    predictions = db.query(Prediction).filter(Prediction.match_id == match_id).all()
+    # ✅ NEW LOGIC HERE 👇
+    all_users = db.query(User).all()
 
-    for p in predictions:
-        if p.predicted_team_id == winner_team_id:
-            p.points_awarded = 10
+    predictions = db.query(Prediction).filter(
+        Prediction.match_id == match_id
+    ).all()
+
+    pred_dict = {p.user_id: p for p in predictions}
+
+    for user in all_users:
+        pred = pred_dict.get(user.id)
+
+        if pred:
+            if pred.predicted_team_id == winner_team_id:
+                pred.points_awarded = 10
+            else:
+                pred.points_awarded = -5
+
+            user.points += pred.points_awarded
+
         else:
-            p.points_awarded = -5
-
-        user = db.query(User).filter(User.id == p.user_id).first()
-        user.points += p.points_awarded
+            # ❌ No prediction → penalty
+            user.points -= 5
 
     db.commit()
 
