@@ -1,6 +1,7 @@
 // src/pages/Leaderboard.js
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
+import DailyWinners from "../components/DailyWinners";
 
 export default function Leaderboard() {
   const [users, setUsers] = useState([]);
@@ -22,6 +23,10 @@ export default function Leaderboard() {
   return (
     <div style={{ padding: 20 }}>
       <h2>🏆 Leaderboard</h2>
+
+      {/* 🏆 ADD HERE */}
+      <DailyWinners />
+
       {users.length === 0 ? (
         <p>No users found.</p>
       ) : (
@@ -36,9 +41,15 @@ export default function Leaderboard() {
           <tbody>
             {users.map((user, index) => (
               <tr key={user.name}>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{index + 1}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{user.name}</td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>{user.points}</td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {index + 1}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {user.name}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
+                  {user.points}
+                </td>
               </tr>
             ))}
           </tbody>

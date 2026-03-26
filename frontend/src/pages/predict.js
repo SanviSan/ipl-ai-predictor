@@ -1,6 +1,7 @@
 // src/pages/predict.js
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
+import MatchWinners from "../components/MatchWinners";
 
 export default function Predict() {
   const [matches, setMatches] = useState([]);
@@ -56,31 +57,30 @@ export default function Predict() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div style={{ maxWidth: "800px", margin: "auto", padding: "20px" }}>
       <h2>🏏 IPL Match Predictions</h2>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {/* ✅ FIX 1: Proper loading state */}
+      {/* Loading */}
       {loadingMatches && <p>Loading matches...</p>}
 
+      {/* No matches */}
       {!loadingMatches && matches.length === 0 && (
         <p>No upcoming matches</p>
       )}
 
+      {/* Match list */}
       {!loadingMatches &&
         matches.map((match) => {
-          // ✅ Safe access (prevents crashes)
           const team1 = match.team1 || {};
           const team2 = match.team2 || {};
 
-          // ✅ FIX 2: Safe AI probability
           const probability =
             match.ai_probability != null
               ? (match.ai_probability * 100).toFixed(0)
               : "50";
 
-          // ✅ FIX 3: AI team fallback
           let aiTeam = "TBD";
           if (match.ai_prediction_team_id === team1.id) {
             aiTeam = team1.short;
@@ -92,26 +92,33 @@ export default function Predict() {
             <div
               key={match.match_id}
               style={{
-                border: "1px solid #ccc",
-                borderRadius: "10px",
-                padding: "15px",
-                marginBottom: "15px",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                background: "#fff",
+                borderRadius: "12px",
+                padding: "20px",
+                marginBottom: "20px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               }}
             >
-              <h3>
+              {/* Match Title */}
+              <h3 style={{ marginBottom: "5px" }}>
                 {team1.short || "T1"} vs {team2.short || "T2"}
               </h3>
 
-              <p>
+              {/* Match Info */}
+              <p style={{ color: "#555", fontSize: "14px" }}>
                 📍 {match.venue || "TBD"} | 📅 {match.match_date}
               </p>
 
-              <p>
-                🤖 AI Prediction: <b>{aiTeam}</b> ({probability}%)
+              {/* AI Prediction */}
+              <p style={{ marginTop: "10px" }}>
+                🤖 AI Prediction:{" "}
+                <b style={{ color: "#007bff" }}>
+                  {aiTeam} ({probability}%)
+                </b>
               </p>
 
-              <div style={{ marginTop: "10px" }}>
+              {/* Buttons */}
+              <div style={{ marginTop: "15px" }}>
                 <button
                   onClick={() =>
                     handlePredict(match.match_id, team1.id)
@@ -120,6 +127,10 @@ export default function Predict() {
                   style={{
                     marginRight: "10px",
                     padding: "8px 15px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#007bff",
+                    color: "#fff",
                     cursor: "pointer",
                   }}
                 >
@@ -133,12 +144,19 @@ export default function Predict() {
                   disabled={loadingPredict}
                   style={{
                     padding: "8px 15px",
+                    borderRadius: "6px",
+                    border: "none",
+                    background: "#28a745",
+                    color: "#fff",
                     cursor: "pointer",
                   }}
                 >
                   {team2.short || "Team 2"}
                 </button>
               </div>
+
+              {/* 🏆 Match Winners */}
+              <MatchWinners matchId={match.match_id} />
             </div>
           );
         })}
@@ -149,9 +167,9 @@ export default function Predict() {
           style={{
             marginTop: "20px",
             padding: "15px",
-            border: "1px solid green",
             borderRadius: "10px",
-            background: "#f0fff0",
+            background: "#e8f5e9",
+            border: "1px solid #28a745",
           }}
         >
           <h3>✅ Prediction Result</h3>
@@ -163,8 +181,8 @@ export default function Predict() {
           <p>
             Probability:{" "}
             <b>
-              {result?.ai_probability
-                ? (result.ai_probability * 100).toFixed(0)
+              {result?.probability
+                ? (result.probability * 100).toFixed(0)
                 : "50"}
               %
             </b>
