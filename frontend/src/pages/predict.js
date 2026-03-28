@@ -1,4 +1,3 @@
-// src/pages/predict.js
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
 import MatchWinners from "../components/MatchWinners";
@@ -10,7 +9,18 @@ export default function Predict() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  // Load matches on page load
+  const [now, setNow] = useState(new Date()); // ⏳ current time
+
+  // ⏳ update every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load matches
   useEffect(() => {
     const loadMatches = async () => {
       try {
@@ -30,6 +40,18 @@ export default function Predict() {
 
     loadMatches();
   }, []);
+
+  // ⏳ Countdown formatter
+  const getCountdown = (matchTime) => {
+    const diff = new Date(matchTime) - now;
+
+    if (diff <= 0) return "🔒 Prediction Closed";
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `⏳ ${hours}h ${mins}m left`;
+  };
 
   // Handle prediction
   const handlePredict = async (matchId, teamId) => {
@@ -62,19 +84,20 @@ export default function Predict() {
 
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {/* Loading */}
       {loadingMatches && <p>Loading matches...</p>}
 
-      {/* No matches */}
       {!loadingMatches && matches.length === 0 && (
         <p>No upcoming matches</p>
       )}
 
-      {/* Match list */}
       {!loadingMatches &&
         matches.map((match) => {
           const team1 = match.team1 || {};
           const team2 = match.team2 || {};
+
+          const matchTime = match.match_datetime; // 🆕 from backend
+
+          const isClosed = new Date(matchTime) <= now; // 🔒
 
           const probability =
             match.ai_probability != null
@@ -99,17 +122,25 @@ export default function Predict() {
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               }}
             >
-              {/* Match Title */}
               <h3 style={{ marginBottom: "5px" }}>
                 {team1.short || "T1"} vs {team2.short || "T2"}
               </h3>
 
-              {/* Match Info */}
               <p style={{ color: "#555", fontSize: "14px" }}>
                 📍 {match.venue || "TBD"} | 📅 {match.match_date}
               </p>
 
-              {/* AI Prediction */}
+              {/* ⏳ Countdown */}
+              <p
+                style={{
+                  marginTop: "8px",
+                  fontWeight: "bold",
+                  color: isClosed ? "#dc3545" : "#28a745",
+                }}
+              >
+                {getCountdown(matchTime)}
+              </p>
+
               <p style={{ marginTop: "10px" }}>
                 🤖 AI Prediction:{" "}
                 <b style={{ color: "#007bff" }}>
@@ -123,7 +154,7 @@ export default function Predict() {
                   onClick={() =>
                     handlePredict(match.match_id, team1.id)
                   }
-                  disabled={loadingPredict}
+                  disabled={loadingPredict || isClosed}
                   style={{
                     marginRight: "10px",
                     padding: "8px 15px",
@@ -131,7 +162,8 @@ export default function Predict() {
                     border: "none",
                     background: "#007bff",
                     color: "#fff",
-                    cursor: "pointer",
+                    cursor: isClosed ? "not-allowed" : "pointer",
+                    opacity: isClosed ? 0.5 : 1,
                   }}
                 >
                   {team1.short || "Team 1"}
@@ -141,27 +173,28 @@ export default function Predict() {
                   onClick={() =>
                     handlePredict(match.match_id, team2.id)
                   }
-                  disabled={loadingPredict}
+                  disabled={loadingPredict || isClosed}
                   style={{
                     padding: "8px 15px",
                     borderRadius: "6px",
                     border: "none",
                     background: "#28a745",
                     color: "#fff",
-                    cursor: "pointer",
+                    cursor: isClosed ? "not-allowed" : "pointer",
+                    opacity: isClosed ? 0.5 : 1,
                   }}
                 >
                   {team2.short || "Team 2"}
                 </button>
               </div>
 
-              {/* 🏆 Match Winners */}
+              {/* 🏆 Winners */}
               <MatchWinners matchId={match.match_id} />
             </div>
           );
         })}
 
-      {/* Result Section */}
+      {/* Result */}
       {result && (
         <div
           style={{

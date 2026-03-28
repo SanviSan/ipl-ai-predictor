@@ -1,7 +1,7 @@
 # backend/main.py
 from fastapi import FastAPI, Depends, Header, HTTPException, status, Body
 from sqlalchemy.orm import Session
-from datetime import date
+from datetime import datetime, timedelta, timezone
 import logging
 
 from backend.database import SessionLocal, engine, Base, get_db
@@ -216,12 +216,18 @@ def get_upcoming_matches(db: Session = Depends(get_db)):
         if not next_match:
             return []
 
-        next_date = next_match.match_date
+        next_date = next_match.match_date.date()
 
-        # Step 2: get all matches on that date
+        start = datetime.combine(next_date, datetime.min.time())
+        end = start + timedelta(days=1)
+
         matches = (
             db.query(Match)
-            .filter(Match.status == "scheduled", Match.match_date == next_date)
+            .filter(
+                Match.status == "scheduled",
+                Match.match_date >= start,
+                Match.match_date < end
+            )
             .all()
         )
 
@@ -231,20 +237,33 @@ def get_upcoming_matches(db: Session = Depends(get_db)):
             team1 = db.query(Team).filter(Team.id == match.team1_id).first()
             team2 = db.query(Team).filter(Team.id == match.team2_id).first()
 
+            IST = timezone(timedelta(hours=5, minutes=30))
+
+            # Convert IST → UTC safely
+            match_datetime_utc = match.match_date.replace(tzinfo=IST).astimezone(timezone.utc)
+
+
             result.append({
                 "match_id": match.id,
+
+                # Keep for display
                 "match_date": match.match_date.isoformat(),
+
+                # 🆕 ADD THIS (used for locking + countdown)
+               "match_datetime": match_datetime_utc.isoformat(),
+
                 "team1": {
                     "id": team1.id,
                     "short": team1.short_name
                 } if team1 else None,
+
                 "team2": {
                     "id": team2.id,
                     "short": team2.short_name
                 } if team2 else None,
+
                 "venue": getattr(match, "venue", "TBD"),
 
-                # fallback AI (temporary)
                 "ai_prediction_team_id": match.team1_id,
                 "ai_probability": 0.6
             })
@@ -288,6 +307,8 @@ def get_ai_prediction(match, db):
 # -------------------------
 # PREDICT
 # -------------------------
+from datetime import datetime
+
 @app.post("/predict")
 def predict(
     prediction: schemas.PredictionCreate,
@@ -299,9 +320,21 @@ def predict(
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 
+    # ❌ Block if already completed
     if match.status == "completed":
         raise HTTPException(status_code=400, detail="Match already completed")
 
+    # 🆕 BLOCK if match already started
+    now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+
+    # If you're still using match_date column (TIMESTAMP)
+    if match.match_date <= now:
+        raise HTTPException(
+            status_code=400,
+            detail="Prediction closed (match already started)"
+        )
+
+    # ❌ Prevent duplicate prediction
     existing = db.query(Prediction).filter(
         Prediction.user_id == user_id,
         Prediction.match_id == prediction.match_id
@@ -310,13 +343,14 @@ def predict(
     if existing:
         raise HTTPException(status_code=400, detail="Already predicted")
 
-    ai_result = get_ai_prediction(match,db)
+    # 🤖 AI prediction
+    ai_result = get_ai_prediction(match, db)
 
     new_prediction = Prediction(
         user_id=user_id,
         match_id=prediction.match_id,
         predicted_team_id=prediction.predicted_team_id,
-        points_awarded=0  # ✅ always 0 initially
+        points_awarded=0
     )
 
     db.add(new_prediction)
