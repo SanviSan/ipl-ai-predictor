@@ -148,6 +148,34 @@ def match_winners(match_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         logging.error(f"Match winners error: {e}")
         raise HTTPException(status_code=500, detail="Error fetching match winners")
+    
+@app.get("/matches/{match_id}/non-voters")
+def get_non_voters(
+    match_id: int,
+    db: Session = Depends(get_db)
+):
+    try:
+        # All users
+        users = db.query(User).all()
+
+        # Users who already voted
+        predictions = db.query(Prediction).filter(
+            Prediction.match_id == match_id
+        ).all()
+
+        voted_user_ids = {p.user_id for p in predictions}
+
+        # Users who did NOT vote
+        non_voters = [
+            {"name": u.name}
+            for u in users if u.id not in voted_user_ids
+        ]
+
+        return non_voters
+
+    except Exception as e:
+        logging.error(f"Non-voters error: {e}")
+        raise HTTPException(status_code=500, detail="Error fetching non-voters")
 
 # -------------------------
 # AUTH - LOGIN

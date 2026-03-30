@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
 import MatchWinners from "../components/MatchWinners";
+import NonVoters from "../components/NonVoters";
 
 export default function Predict() {
   const [matches, setMatches] = useState([]);
@@ -190,6 +191,8 @@ export default function Predict() {
 
               {/* 🏆 Winners */}
               <MatchWinners matchId={match.match_id} />
+              {/* ⏳ Non Voters */}
+              <NonVoters matchId={match.match_id} />
             </div>
           );
         })}
