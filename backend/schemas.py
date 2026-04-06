@@ -15,4 +15,4 @@ class PredictionCreate(BaseModel):
     predicted_team_id: int
 
 class MatchResultUpdate(BaseModel):
-    winner_team_id: int
+     winner_team_id: Optional[int] = None   # 👈 allow NULL

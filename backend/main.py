@@ -442,12 +442,25 @@ def update_match_result(
     if match.status == "completed":
         raise HTTPException(status_code=400, detail="Already completed")
 
-    # ✅ Update match
+    # -------------------------
+    # 🆕 HANDLE NO RESULT (NR)
+    # -------------------------
+    if result.winner_team_id is None:
+        match.status = "completed"
+        match.winner_team_id = None
+
+        # Do NOT touch predictions or user points
+        db.commit()
+
+        return {"message": "Match marked as No Result (NR)"}
+
+    # -------------------------
+    # NORMAL RESULT FLOW
+    # -------------------------
     winner_team_id = result.winner_team_id
     match.status = "completed"
     match.winner_team_id = winner_team_id
 
-    # ✅ NEW LOGIC HERE 👇
     all_users = db.query(User).all()
 
     predictions = db.query(Prediction).filter(

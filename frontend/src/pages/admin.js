@@ -80,6 +80,20 @@ export default function Admin() {
           <button onClick={() => updateResult(m.match_id, m.team2.id)}>
             {m.team2.short}
           </button>
+          <button
+            onClick={() => updateResult(m.match_id, null)}
+            style={{
+              marginLeft: "10px",
+              padding: "8px 15px",
+              background: "#6c757d",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            No Result (NR)
+          </button>
         </div>
       ))}
     </div>
