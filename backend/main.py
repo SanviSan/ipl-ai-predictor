@@ -226,8 +226,13 @@ def update_match_result(
     match.status = "completed"
     match.winner_team_id = result.winner_team_id
 
-    users = db.query(User).filter(User.group_id == admin.group_id).all()
-    predictions = db.query(Prediction).filter(Prediction.match_id == match_id).all()
+    # ✅ FIX: Get ALL users (not just one group)
+    users = db.query(User).all()
+
+    # ✅ Get predictions
+    predictions = db.query(Prediction).filter(
+        Prediction.match_id == match_id
+    ).all()
 
     pred_map = {p.user_id: p for p in predictions}
 
@@ -306,14 +311,22 @@ def leaderboard(user=Depends(get_current_user), db: Session = Depends(get_db)):
 # -------------------------
 # DAILY WINNERS (FIXED)
 # -------------------------
+from datetime import datetime
+
 @app.get("/leaderboard/daily")
 def daily_winners(user=Depends(get_current_user), db: Session = Depends(get_db)):
 
+    # ✅ Get logged-in user
     db_user = db.query(User).filter(User.id == user["user_id"]).first()
 
     if not db_user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    group_id = db_user.group_id
+    if not group_id:
+        raise HTTPException(status_code=401, detail="Missing group_id")
+
+    # ✅ Get latest completed match date
     latest = (
         db.query(Match)
         .filter(Match.status == "completed")
@@ -324,47 +337,46 @@ def daily_winners(user=Depends(get_current_user), db: Session = Depends(get_db))
     if not latest:
         return []
 
-    match_date = latest.match_date.date()
+    match_date = latest.match_date
 
+    # ✅ Get all matches of that day
     matches = db.query(Match).filter(
         Match.status == "completed",
-        Match.match_date >= datetime.combine(match_date, datetime.min.time())
+        Match.match_date == match_date
     ).all()
 
     match_ids = [m.id for m in matches]
 
-    # 🔥 preload ALL users once (BIG FIX)
-    users = db.query(User).all()
-    user_map = {u.id: u for u in users}
+    # ✅ Get users of this group
+    group_users = db.query(User).filter(User.group_id == group_id).all()
+    user_ids = [u.id for u in group_users]
 
+    # ✅ Get predictions ONLY for group users
     predictions = db.query(Prediction).filter(
-        Prediction.match_id.in_(match_ids)
+        Prediction.match_id.in_(match_ids),
+        Prediction.user_id.in_(user_ids)
     ).all()
 
+    # ✅ Aggregate points
     points = {}
 
     for p in predictions:
-        u = user_map.get(p.user_id)
-
-        if not u:
-            continue
-
-        # 👇 group filter logic
-        if not db_user.is_admin and u.group_id != db_user.group_id:
-            continue
-
-        points[p.user_id] = points.get(p.user_id, 0) + p.points_awarded
+        points[p.user_id] = points.get(p.user_id, 0) + (p.points_awarded or 0)
 
     if not points:
         return []
 
+    # ✅ Get max points
     max_pts = max(points.values())
 
-    return [
-        {
-            "name": user_map[uid].name,
-            "points": pts
-        }
-        for uid, pts in points.items()
-        if pts == max_pts
-    ]
+    # ✅ Return winners
+    winners = []
+    for uid, pts in points.items():
+        if pts == max_pts:
+            user_obj = db.query(User).filter(User.id == uid).first()
+            winners.append({
+                "name": user_obj.name,
+                "points": pts
+            })
+
+    return winners
