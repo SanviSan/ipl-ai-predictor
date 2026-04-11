@@ -18,7 +18,7 @@ def get_db():
         yield db
     finally:
         db.close()
-
+        
 @router.post("/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.email == user.email).first()
@@ -30,7 +30,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
         name=user.name,
         email=user.email,
-        password=hashed_password
+        password=hashed_password,
+        group_id=user.group_id   # ✅ FIX ADDED
     )
 
     db.add(new_user)

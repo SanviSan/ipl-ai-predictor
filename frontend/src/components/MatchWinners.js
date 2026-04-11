@@ -1,15 +1,21 @@
 // src/components/MatchWinners.js
 import { useEffect, useState } from "react";
-import { API_URL } from "../api/api";
+import { fetchWithAuth } from "../api/api";
 
 export default function MatchWinners({ matchId }) {
   const [winners, setWinners] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/matches/${matchId}/winners`)
-      .then(res => res.json())
-      .then(data => setWinners(data))
-      .catch(err => console.error(err));
+    const load = async () => {
+      try {
+        const data = await fetchWithAuth(`/matches/${matchId}/winners`);
+        setWinners(data);
+      } catch (err) {
+        console.error("Match winners error:", err);
+      }
+    };
+
+    load();
   }, [matchId]);
 
   if (!winners.length) return null;

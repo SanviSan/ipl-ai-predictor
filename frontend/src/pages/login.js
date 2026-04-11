@@ -9,6 +9,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
   const navigate = useNavigate();
   const { login } = useContext(UserContext);
 
@@ -25,18 +26,33 @@ export default function Login() {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(form),
       });
 
       const data = await res.json();
 
+      // ❌ backend error handling
       if (!res.ok) {
         throw new Error(data.detail || "Login failed");
       }
 
+      // ❌ safety check
+      if (!data.token) {
+        throw new Error("No token received from server");
+      }
+
+      // ✅ store in context
       login(data.token, data.is_admin);
+
+      // ✅ store in localStorage (CRITICAL for API calls)
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      setError("");
+
+      // redirect
       navigate("/predict");
 
     } catch (err) {
@@ -56,7 +72,9 @@ export default function Login() {
           <input
             placeholder="Email"
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, email: e.target.value })
+            }
             style={styles.input}
           />
 
@@ -64,32 +82,34 @@ export default function Login() {
             placeholder="Password"
             type="password"
             value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, password: e.target.value })
+            }
             style={styles.input}
           />
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            ...styles.button,
-            background: loading ? "#999" : "#007bff",
-            cursor: loading ? "not-allowed" : "pointer",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "10px"
-          }}
-        >
-          {loading ? (
-            <>
-              <ClipLoader size={18} color="#fff" />
-              Logging in...
-            </>
-          ) : (
-            "Login"
-          )}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              ...styles.button,
+              background: loading ? "#999" : "#007bff",
+              cursor: loading ? "not-allowed" : "pointer",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            {loading ? (
+              <>
+                <ClipLoader size={18} color="#fff" />
+                Logging in...
+              </>
+            ) : (
+              "Login"
+            )}
+          </button>
         </form>
 
         {error && <p style={styles.error}>{error}</p>}
@@ -144,5 +164,5 @@ const styles = {
     color: "red",
     marginTop: "10px",
     fontSize: "14px",
-  }
+  },
 };

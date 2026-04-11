@@ -5,6 +5,7 @@ class UserCreate(BaseModel):
     name: str
     email: str
     password: str
+    group_id: int  
 
 class UserLogin(BaseModel):
     email: str

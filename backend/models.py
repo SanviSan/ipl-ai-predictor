@@ -11,6 +11,7 @@ class User(Base):
     password = Column(String)
     points = Column(Integer, default=0)
     is_admin = Column(Boolean, default=False) 
+    group_id = Column(Integer, nullable=True)
 
 class Team(Base):  
     __tablename__ = "teams"

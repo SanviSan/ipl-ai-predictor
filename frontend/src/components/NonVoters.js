@@ -1,14 +1,23 @@
 import { useEffect, useState } from "react";
-import { API_URL } from "../api/api";
+import { fetchWithAuth } from "../api/api";
 
 export default function NonVoters({ matchId }) {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/matches/${matchId}/non-voters`)
-      .then(res => res.json())
-      .then(data => setUsers(data))
-      .catch(err => console.error(err));
+    const load = async () => {
+      try {
+        const data = await fetchWithAuth(
+          `/matches/${matchId}/non-voters`
+        );
+        setUsers(data);
+      } catch (err) {
+        console.error("Non voters error:", err);
+        setUsers([]);
+      }
+    };
+
+    load();
   }, [matchId]);
 
   if (!users.length) return null;
@@ -23,7 +32,9 @@ export default function NonVoters({ matchId }) {
     }}>
       <b>⏳ Not yet voted:</b>
       {users.map((u, i) => (
-        <span key={i}> {u.name}{i < users.length - 1 ? "," : ""}</span>
+        <span key={i}>
+          {" "} {u.name}{i < users.length - 1 ? "," : ""}
+        </span>
       ))}
     </div>
   );

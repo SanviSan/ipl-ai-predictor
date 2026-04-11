@@ -1,55 +1,70 @@
-// src/pages/Leaderboard.js
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
 import DailyWinners from "../components/DailyWinners";
 
 export default function Leaderboard() {
   const [users, setUsers] = useState([]);
+  const [dailyWinners, setDailyWinners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadLeaderboard = async () => {
+    const loadData = async () => {
       try {
-        const data = await fetchWithAuth("/leaderboard");
-        setUsers(data);
+        setLoading(true);
+
+        // ✅ Run both APIs in parallel (FAST)
+        const [leaderboardData, dailyData] = await Promise.all([
+          fetchWithAuth("/leaderboard"),
+          fetchWithAuth("/leaderboard/daily"),
+        ]);
+
+        setUsers(leaderboardData);
+        setDailyWinners(dailyData);
+
       } catch (err) {
-        console.error(err);
-        alert("Failed to load leaderboard");
+        console.error("Leaderboard error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadLeaderboard();
+    loadData();
   }, []);
 
   return (
     <div style={{ padding: 20 }}>
       <h2>🏆 Leaderboard</h2>
 
-      {/* 🏆 ADD HERE */}
-      <DailyWinners />
+      {/* ✅ No lag now */}
+      <DailyWinners winners={dailyWinners} loading={loading} />
 
-      {users.length === 0 ? (
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {loading ? (
+        <p>Loading leaderboard...</p>
+      ) : users.length === 0 ? (
         <p>No users found.</p>
       ) : (
-        <table style={{ borderCollapse: "collapse", width: "50%" }}>
+        <table style={{
+          borderCollapse: "collapse",
+          width: "60%",
+          marginTop: "20px"
+        }}>
           <thead>
-            <tr>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Rank</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Name</th>
-              <th style={{ border: "1px solid #ccc", padding: "8px" }}>Points</th>
+            <tr style={{ background: "#f5f5f5" }}>
+              <th style={th}>Rank</th>
+              <th style={th}>Name</th>
+              <th style={th}>Points</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user, index) => (
               <tr key={user.name}>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {index + 1}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {user.name}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "8px" }}>
-                  {user.points}
-                </td>
+                <td style={td}>{index + 1}</td>
+                <td style={td}>{user.name}</td>
+                <td style={td}>{user.points}</td>
               </tr>
             ))}
           </tbody>
@@ -58,3 +73,15 @@ export default function Leaderboard() {
     </div>
   );
 }
+
+// 🎨 Styles
+const th = {
+  border: "1px solid #ccc",
+  padding: "10px",
+  textAlign: "left"
+};
+
+const td = {
+  border: "1px solid #ccc",
+  padding: "8px"
+};
