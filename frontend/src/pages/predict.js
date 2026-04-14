@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
 import MatchWinners from "../components/MatchWinners";
 import NonVoters from "../components/NonVoters";
+import MatchVotes from "../components/MatchVotes";
 
 export default function Predict() {
   const [matches, setMatches] = useState([]);
@@ -10,9 +11,9 @@ export default function Predict() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const [now, setNow] = useState(new Date()); // ⏳ current time
+  const [now, setNow] = useState(new Date());
 
-  // ⏳ update every second
+  // ⏳ live clock (updates every second)
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date());
@@ -42,7 +43,7 @@ export default function Predict() {
     loadMatches();
   }, []);
 
-  // ⏳ Countdown formatter
+  // ⏳ Countdown
   const getCountdown = (matchTime) => {
     const diff = new Date(matchTime) - now;
 
@@ -54,7 +55,7 @@ export default function Predict() {
     return `⏳ ${hours}h ${mins}m left`;
   };
 
-  // Handle prediction
+  // Predict API
   const handlePredict = async (matchId, teamId) => {
     setLoadingPredict(true);
     setError("");
@@ -96,9 +97,11 @@ export default function Predict() {
           const team1 = match.team1 || {};
           const team2 = match.team2 || {};
 
-          const matchTime = match.match_datetime; // 🆕 from backend
+          const matchTime = match.match_datetime;
 
-          const isClosed = new Date(matchTime) <= now; // 🔒
+          // ✅ FIXED: per-match closure logic
+          const matchEndTime = new Date(matchTime).getTime();
+          const isClosed = now.getTime() >= matchEndTime;
 
           const probability =
             match.ai_probability != null
@@ -114,7 +117,7 @@ export default function Predict() {
 
           return (
             <div
-              key={match.match_id}
+              key={`${match.match_id}-${isClosed}`}
               style={{
                 background: "#fff",
                 borderRadius: "12px",
@@ -142,6 +145,7 @@ export default function Predict() {
                 {getCountdown(matchTime)}
               </p>
 
+              {/* 🤖 AI Prediction */}
               <p style={{ marginTop: "10px" }}>
                 🤖 AI Prediction:{" "}
                 <b style={{ color: "#007bff" }}>
@@ -152,9 +156,7 @@ export default function Predict() {
               {/* Buttons */}
               <div style={{ marginTop: "15px" }}>
                 <button
-                  onClick={() =>
-                    handlePredict(match.match_id, team1.id)
-                  }
+                  onClick={() => handlePredict(match.match_id, team1.id)}
                   disabled={loadingPredict || isClosed}
                   style={{
                     marginRight: "10px",
@@ -171,9 +173,7 @@ export default function Predict() {
                 </button>
 
                 <button
-                  onClick={() =>
-                    handlePredict(match.match_id, team2.id)
-                  }
+                  onClick={() => handlePredict(match.match_id, team2.id)}
                   disabled={loadingPredict || isClosed}
                   style={{
                     padding: "8px 15px",
@@ -191,13 +191,24 @@ export default function Predict() {
 
               {/* 🏆 Winners */}
               <MatchWinners matchId={match.match_id} />
+
               {/* ⏳ Non Voters */}
               <NonVoters matchId={match.match_id} />
+
+              {/* 👁️ Votes shown AFTER match closes */}
+              {isClosed && (
+                <MatchVotes
+                  matchId={match.match_id}
+                  isClosed={isClosed}
+                  team1Name={team1.short}
+                  team2Name={team2.short}
+                />
+              )}
             </div>
           );
         })}
 
-      {/* Result */}
+      {/* Result Panel */}
       {result && (
         <div
           style={{

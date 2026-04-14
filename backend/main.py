@@ -199,6 +199,45 @@ def predict(
 
     return {"message": "Prediction saved"}
 
+@app.get("/matches/{match_id}/votes")
+def get_votes(match_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
+
+    db_user = db.query(User).filter(User.id == user["user_id"]).first()
+
+    if not db_user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    # -------------------------
+    # REMOVE GROUP LOGIC COMPLETELY
+    # -------------------------
+    # (NO match.group_id check because Match doesn't have it)
+
+    predictions = db.query(Prediction).filter(
+        Prediction.match_id == match_id
+    ).all()
+
+    team1 = []
+    team2 = []
+
+    for p in predictions:
+        u = db.query(User).filter(User.id == p.user_id).first()
+        if not u:
+            continue
+
+        if p.predicted_team_id == match.team1_id:
+            team1.append(u.name)
+        elif p.predicted_team_id == match.team2_id:
+            team2.append(u.name)
+
+    return {
+        "team1": team1,
+        "team2": team2
+    }
+
 # -------------------------
 # RESULT (ADMIN + NR SUPPORT)
 # -------------------------
