@@ -280,16 +280,38 @@ def update_match_result(
 
         if p:
             if p.predicted_team_id == result.winner_team_id:
-                p.points_awarded = 10
+                p.points_awarded = 25
             else:
-                p.points_awarded = -5
+                p.points_awarded = -10
             u.points += p.points_awarded
         else:
-            u.points -= 5
+            u.points -= 10
 
     db.commit()
 
     return {"message": "Result updated"}
+
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+@app.post("/admin/reset-password/{user_id}")
+def reset_password(
+    user_id: int,
+    new_password: str,
+    admin=Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password = pwd_context.hash(new_password)
+
+    db.commit()
+
+    return {"message": "Password updated successfully"}
 
 # -------------------------
 # WINNERS (FIXED)
