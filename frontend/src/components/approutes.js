@@ -12,6 +12,8 @@ import Leaderboard from "../pages/leaderboard";
 import Navbar from "../components/Navbar";
 import ProtectedRoute from "../components/protectedroute";
 import AdminRoute from "../components/adminroute"; // New
+import FifaStandings from "../pages/FifaStandings";
+import FifaWinnerPrediction from "../pages/FifaWinnerPrediction";
 
 import { UserProvider } from "../context/UserContext";
 
@@ -49,6 +51,22 @@ export default function AppRoutes() {
             element={
               <ProtectedRoute>
                 <Leaderboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/fifa-standings"
+            element={
+              <ProtectedRoute>
+                <FifaStandings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/fifa-winner"
+            element={
+              <ProtectedRoute>
+                <FifaWinnerPrediction />
               </ProtectedRoute>
             }
           />

@@ -3,6 +3,8 @@ import { fetchWithAuth } from "../api/api";
 import MatchWinners from "../components/MatchWinners";
 import NonVoters from "../components/NonVoters";
 import MatchVotes from "../components/MatchVotes";
+import FIFAMatchCard from "../components/FIFAMatchCard";
+
 
 export default function Predict() {
   const [matches, setMatches] = useState([]);
@@ -12,13 +14,11 @@ export default function Predict() {
   const [result, setResult] = useState(null);
 
   const [now, setNow] = useState(new Date());
+  const [tournament, setTournament] = useState("FIFA WC 2026");
 
-  // ⏳ live clock (updates every second)
+  // ⏳ live clock
   useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-
+    const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -27,10 +27,12 @@ export default function Predict() {
     const loadMatches = async () => {
       try {
         setLoadingMatches(true);
-        const data = await fetchWithAuth("/matches/upcoming");
 
-        console.log("Matches from API:", data);
+        const data = await fetchWithAuth(
+          `/matches/upcoming/${encodeURIComponent(tournament)}`
+        );
 
+        console.log("Matches:", data);
         setMatches(data || []);
       } catch (err) {
         console.error(err);
@@ -41,12 +43,15 @@ export default function Predict() {
     };
 
     loadMatches();
-  }, []);
+  }, [tournament]);
 
-  // ⏳ Countdown
+  // ⏳ Safe countdown
   const getCountdown = (matchTime) => {
-    const diff = new Date(matchTime) - now;
+    if (!matchTime) return "⏳ Time TBD";
 
+    const diff = new Date(matchTime).getTime() - now.getTime();
+
+    if (isNaN(diff)) return "⏳ Time TBD";
     if (diff <= 0) return "🔒 Prediction Closed";
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -66,11 +71,11 @@ export default function Predict() {
         method: "POST",
         body: JSON.stringify({
           match_id: matchId,
-          predicted_team_id: teamId,
+          predicted_team_id: teamId === "DRAW" ? null : teamId,
+          is_draw: teamId === "DRAW"
         }),
       });
 
-      console.log("Prediction response:", res);
       setResult(res);
     } catch (err) {
       console.error(err);
@@ -80,135 +85,178 @@ export default function Predict() {
     }
   };
 
+  const isFIFA = tournament === "FIFA WC 2026";
+
   return (
     <div style={{ maxWidth: "800px", margin: "auto", padding: "20px" }}>
-      <h2>🏏 IPL Match Predictions</h2>
+      
+      {/* HEADER */}
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <h2>
+          {isFIFA ? "⚽ FIFA World Cup Predictions" : "🏏 IPL Predictions"}
+        </h2>
 
+        <select
+          value={tournament}
+          onChange={(e) => setTournament(e.target.value)}
+          style={{ padding: "8px", borderRadius: "6px" }}
+        >
+          <option value="IPL 2026">IPL 2026</option>
+          <option value="FIFA WC 2026">FIFA WC 2026</option>
+        </select>
+      </div>
+
+      {/* STATES */}
       {error && <p style={{ color: "red" }}>{error}</p>}
-
       {loadingMatches && <p>Loading matches...</p>}
+      {!loadingMatches && matches.length === 0 && <p>No upcoming matches</p>}
 
-      {!loadingMatches && matches.length === 0 && (
-        <p>No upcoming matches</p>
-      )}
+      {/* MATCH LIST */}
+{!loadingMatches &&
+  matches.map((match) => {
+    const team1 = match.team1 || {};
+    const team2 = match.team2 || {};
 
-      {!loadingMatches &&
-        matches.map((match) => {
-          const team1 = match.team1 || {};
-          const team2 = match.team2 || {};
+    const matchTime = match.match_datetime;
 
-          const matchTime = match.match_datetime;
+    const isClosed =
+      matchTime &&
+      new Date(matchTime).getTime() <= now.getTime();
 
-          // ✅ FIXED: per-match closure logic
-          const matchEndTime = new Date(matchTime).getTime();
-          const isClosed = now.getTime() >= matchEndTime;
+    const probability =
+      match.ai_probability != null
+        ? (match.ai_probability * 100).toFixed(0)
+        : "50";
 
-          const probability =
-            match.ai_probability != null
-              ? (match.ai_probability * 100).toFixed(0)
-              : "50";
+    let aiTeam = "TBD";
 
-          let aiTeam = "TBD";
-          if (match.ai_prediction_team_id === team1.id) {
-            aiTeam = team1.short;
-          } else if (match.ai_prediction_team_id === team2.id) {
-            aiTeam = team2.short;
-          }
+    if (match.ai_prediction_team_id === team1.id) {
+      aiTeam = team1.short;
+    } else if (match.ai_prediction_team_id === team2.id) {
+      aiTeam = team2.short;
+    } else if (match.ai_prediction_team_id === 0) {
+      aiTeam = "Draw";
+    }
 
-          return (
-            <div
-              key={`${match.match_id}-${isClosed}`}
-              style={{
-                background: "#fff",
-                borderRadius: "12px",
-                padding: "20px",
-                marginBottom: "20px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-              }}
-            >
-              <h3 style={{ marginBottom: "5px" }}>
-                {team1.short || "T1"} vs {team2.short || "T2"}
-              </h3>
+    // =========================
+    // FIFA CARD
+    // =========================
+    if (isFIFA) {
+      return (
+        <div key={match.match_id}>
+          <FIFAMatchCard
+            match={{
+              ...match,
+              team1,
+              team2,
+              aiTeam,
+              probability,
+            }}
+            onPredict={handlePredict}
+          />
 
-              <p style={{ color: "#555", fontSize: "14px" }}>
-                📍 {match.venue || "TBD"} | 📅 {match.match_date}
-              </p>
+          <MatchWinners matchId={match.match_id} />
+          <NonVoters matchId={match.match_id} />
 
-              {/* ⏳ Countdown */}
-              <p
-                style={{
-                  marginTop: "8px",
-                  fontWeight: "bold",
-                  color: isClosed ? "#dc3545" : "#28a745",
-                }}
-              >
-                {getCountdown(matchTime)}
-              </p>
+          {isClosed && (
+            <MatchVotes
+              matchId={match.match_id}
+              team1Name={team1.short}
+              team2Name={team2.short}
+              isClosed={isClosed}
+            />
+          )}
+        </div>
+      );
+    }
 
-              {/* 🤖 AI Prediction */}
-              <p style={{ marginTop: "10px" }}>
-                🤖 AI Prediction:{" "}
-                <b style={{ color: "#007bff" }}>
-                  {aiTeam} ({probability}%)
-                </b>
-              </p>
+    // =========================
+    // IPL CARD
+    // =========================
+    return (
+      <div
+        key={`${match.match_id}-${tournament}`}
+        style={{
+          background: "#fff",
+          borderRadius: "12px",
+          padding: "20px",
+          marginBottom: "20px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        }}
+      >
+        <h3>
+          {team1.short || "T1"} vs {team2.short || "T2"}
+        </h3>
 
-              {/* Buttons */}
-              <div style={{ marginTop: "15px" }}>
-                <button
-                  onClick={() => handlePredict(match.match_id, team1.id)}
-                  disabled={loadingPredict || isClosed}
-                  style={{
-                    marginRight: "10px",
-                    padding: "8px 15px",
-                    borderRadius: "6px",
-                    border: "none",
-                    background: "#007bff",
-                    color: "#fff",
-                    cursor: isClosed ? "not-allowed" : "pointer",
-                    opacity: isClosed ? 0.5 : 1,
-                  }}
-                >
-                  {team1.short || "Team 1"}
-                </button>
+        <p style={{ fontSize: "14px", color: "#555" }}>
+          📍 {match.venue || "TBD"} | 📅 {match.match_date}
+        </p>
 
-                <button
-                  onClick={() => handlePredict(match.match_id, team2.id)}
-                  disabled={loadingPredict || isClosed}
-                  style={{
-                    padding: "8px 15px",
-                    borderRadius: "6px",
-                    border: "none",
-                    background: "#28a745",
-                    color: "#fff",
-                    cursor: isClosed ? "not-allowed" : "pointer",
-                    opacity: isClosed ? 0.5 : 1,
-                  }}
-                >
-                  {team2.short || "Team 2"}
-                </button>
-              </div>
+        <p
+          style={{
+            fontWeight: "bold",
+            color: isClosed ? "#dc3545" : "#28a745",
+          }}
+        >
+          {getCountdown(matchTime)}
+        </p>
 
-              {/* 🏆 Winners */}
-              <MatchWinners matchId={match.match_id} />
+        <p>
+          🤖 AI Prediction:{" "}
+          <b style={{ color: "#007bff" }}>
+            {aiTeam} ({probability}%)
+          </b>
+        </p>
+        
+        <div style={{ marginTop: "15px" }}>
+          <button 
+            title={team1.name}
+            onClick={() => handlePredict(match.match_id, team1.id)}
+            disabled={loadingPredict || isClosed}
+            style={{
+              marginRight: "10px",
+              padding: "8px 15px",
+              borderRadius: "6px",
+              border: "none",
+              background: "#007bff",
+              color: "#fff",
+            }}
+          >
+           {team1.short}
+          </button>
 
-              {/* ⏳ Non Voters */}
-              <NonVoters matchId={match.match_id} />
+          <button
+            title={team2.name}
+            onClick={() => handlePredict(match.match_id, team2.id)}
+            disabled={loadingPredict || isClosed}
+            style={{
+              padding: "8px 15px",
+              borderRadius: "6px",
+              border: "none",
+              background: "#28a745",
+              color: "#fff",
+            }}
+          >
+            {team2.short}
+          </button>
+        </div>
 
-              {/* 👁️ Votes shown AFTER match closes */}
-              {isClosed && (
-                <MatchVotes
-                  matchId={match.match_id}
-                  isClosed={isClosed}
-                  team1Name={team1.short}
-                  team2Name={team2.short}
-                />
-              )}
-            </div>
-          );
-        })}
+        <MatchWinners matchId={match.match_id} />
+        <NonVoters matchId={match.match_id} />
 
-      {/* Result Panel */}
+        {isClosed && (
+          <MatchVotes
+            matchId={match.match_id}
+            team1Name={team1.short}
+            team2Name={team2.short}
+            isClosed={isClosed}
+          />
+        )}
+      </div>
+    );
+  })}
+
+      {/* RESULT PANEL */}
       {result && (
         <div
           style={{
