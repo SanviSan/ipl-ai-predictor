@@ -13,7 +13,18 @@ class UserLogin(BaseModel):
 
 class PredictionCreate(BaseModel):
     match_id: int
-    predicted_team_id: int
+    predicted_team_id: Optional[int] = None
+    is_draw: bool = False
 
 class MatchResultUpdate(BaseModel):
-     winner_team_id: Optional[int] = None   # 👈 allow NULL
+    winner_team_id: Optional[int] = None
+    is_draw: bool = False
+
+class TournamentPredictionCreate(BaseModel):
+    tournament: str = "FIFA WC 2026"
+    team_id: int
+    
+class TeamBase(BaseModel):
+    name: str
+    short_name: str
+    tournament: str | None = None
