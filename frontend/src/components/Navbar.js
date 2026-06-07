@@ -47,6 +47,24 @@ export default function Navbar() {
             Leaderboard
           </Link>
         )}
+
+        {loggedIn && (
+          <Link
+            style={{ color: "#fff", marginRight: "15px" }}
+            to="/fifa-standings"
+          >
+            ⚽ FIFA Standings
+          </Link>
+        )}
+
+        {loggedIn && (
+          <Link
+            style={{ color: "#fff", marginRight: "15px" }}
+            to="/fifa-winner"
+          >
+            🏆 World Cup Winner
+          </Link>
+        )}
       </div>
 
       <div>

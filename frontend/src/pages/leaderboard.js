@@ -8,50 +8,82 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // ⭐ ADD TOURNAMENT SWITCH
+  const [tournament, setTournament] = useState("FIFA WC 2026");
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
+        setError("");
 
-        // ✅ Run both APIs in parallel (FAST)
+        const endpoint =
+          tournament === "FIFA WC 2026"
+            ? "/leaderboard/fifa"
+            : "/leaderboard/ipl";
+
         const [leaderboardData, dailyData] = await Promise.all([
-          fetchWithAuth("/leaderboard"),
+          fetchWithAuth(endpoint),
           fetchWithAuth("/leaderboard/daily"),
         ]);
 
-        setUsers(leaderboardData);
-        setDailyWinners(dailyData);
-
+        setUsers(leaderboardData || []);
+        setDailyWinners(dailyData || []);
       } catch (err) {
         console.error("Leaderboard error:", err);
-        setError(err.message);
+        setError(err.message || "Failed to load leaderboard");
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, []);
+  }, [tournament]);
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>🏆 Leaderboard</h2>
 
-      {/* ✅ No lag now */}
+      {/* HEADER */}
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <h2>
+          {tournament === "FIFA WC 2026"
+            ? "⚽ FIFA Leaderboard"
+            : "🏏 IPL Leaderboard"}
+        </h2>
+
+        {/* TOURNAMENT SELECTOR */}
+        <select
+          value={tournament}
+          onChange={(e) => setTournament(e.target.value)}
+          style={{
+            padding: "8px",
+            borderRadius: "6px",
+          }}
+        >
+          <option value="IPL 2026">IPL 2026</option>
+          <option value="FIFA WC 2026">FIFA WC 2026</option>
+        </select>
+      </div>
+
+      {/* DAILY WINNERS */}
       <DailyWinners winners={dailyWinners} loading={loading} />
 
+      {/* ERROR */}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
+      {/* LOADING */}
       {loading ? (
         <p>Loading leaderboard...</p>
       ) : users.length === 0 ? (
         <p>No users found.</p>
       ) : (
-        <table style={{
-          borderCollapse: "collapse",
-          width: "60%",
-          marginTop: "20px"
-        }}>
+        <table
+          style={{
+            borderCollapse: "collapse",
+            width: "60%",
+            marginTop: "20px",
+          }}
+        >
           <thead>
             <tr style={{ background: "#f5f5f5" }}>
               <th style={th}>Rank</th>
@@ -59,6 +91,7 @@ export default function Leaderboard() {
               <th style={th}>Points</th>
             </tr>
           </thead>
+
           <tbody>
             {users.map((user, index) => (
               <tr key={user.name}>
@@ -78,10 +111,10 @@ export default function Leaderboard() {
 const th = {
   border: "1px solid #ccc",
   padding: "10px",
-  textAlign: "left"
+  textAlign: "left",
 };
 
 const td = {
   border: "1px solid #ccc",
-  padding: "8px"
+  padding: "8px",
 };
