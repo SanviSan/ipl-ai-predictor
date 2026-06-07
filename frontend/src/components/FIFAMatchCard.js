@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { fetchWithAuth } from "../api/api";
 
 export default function FIFAMatchCard({ match, onPredict }) {
   const [loading, setLoading] = useState(false);
@@ -7,47 +6,48 @@ export default function FIFAMatchCard({ match, onPredict }) {
   const team1 = match.team1 || {};
   const team2 = match.team2 || {};
 
-  const matchTime =match.match_datetime ||match.match_date;
+  const matchTime = match.match_datetime || match.match_date;
   const now = new Date();
 
-  const isClosed = matchTime && new Date(matchTime).getTime() <= now.getTime();
-  
-  const drawAllowed = [
-    "Group Stage"
-  ].includes(match.stage);
+  // -------------------------
+  // TIME DISPLAY (FIXED)
+  // -------------------------
+  const localMatchTime = matchTime
+    ? new Date(matchTime).toLocaleString(undefined, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "TBD";
 
+  const isClosed =
+    matchTime && new Date(matchTime).getTime() <= now.getTime();
+
+  const drawAllowed = ["Group Stage"].includes(match.stage);
+
+  // -------------------------
+  // COUNTDOWN TIMER
+  // -------------------------
   const getCountdown = () => {
     if (!matchTime) return "⏳ Time TBD";
-  
-    const diff =
-      new Date(matchTime).getTime() -
-      now.getTime();
-  
-    if (isNaN(diff)) return "⏳ Time TBD";
-  
-    if (diff <= 0) {
-      return "🔒 Predictions Closed";
-    }
-  
-    const hours = Math.floor(
-      diff / (1000 * 60 * 60)
-    );
-  
-    const mins = Math.floor(
-      (diff % (1000 * 60 * 60)) /
-        (1000 * 60)
-    );
 
-    console.log(
-        team1.short,
-        team2.short,
-        matchTime,
-        isClosed
-      );
-  
+    const diff = new Date(matchTime).getTime() - now.getTime();
+
+    if (isNaN(diff)) return "⏳ Time TBD";
+    if (diff <= 0) return "🔒 Predictions Closed";
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
     return `⏳ ${hours}h ${mins}m left`;
   };
 
+  // -------------------------
+  // PREDICT HANDLER
+  // -------------------------
   const handlePredict = async (teamId) => {
     setLoading(true);
     await onPredict(match.match_id, teamId);
@@ -62,78 +62,83 @@ export default function FIFAMatchCard({ match, onPredict }) {
 
   return (
     <div style={styles.card}>
-      
-      {/* Header */}
+      {/* HEADER */}
       <div style={styles.header}>
-      <div style={styles.teams}>
-  <div style={styles.team}>
-    <img
-      src={`/team-logos/${team1.short}.png`}
-      alt={team1.short}
-      style={styles.logo}
-      onError={(e) => {
-        e.target.style.display = "none";
-      }}
-    />
-    <div>{team1.short}</div>
-  </div>
+        <div style={styles.teams}>
+          <div style={styles.team}>
+            <img
+              src={`/team-logos/${team1.short}.png`}
+              alt={team1.short}
+              style={styles.logo}
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+            />
+            <div>{team1.short}</div>
+          </div>
 
-  <h3>VS</h3>
+          <h3>VS</h3>
 
-  <div style={styles.team}>
-    <img
-      src={`/team-logos/${team2.short}.png`}
-      alt={team2.short}
-      style={styles.logo}
-      onError={(e) => {
-        e.target.style.display = "none";
-      }}
-    />
-    <div>{team2.short}</div>
-  </div>
-</div>
+          <div style={styles.team}>
+            <img
+              src={`/team-logos/${team2.short}.png`}
+              alt={team2.short}
+              style={styles.logo}
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+            />
+            <div>{team2.short}</div>
+          </div>
+        </div>
 
         <span style={styles.stage}>
           {match.stage || "Group Stage"}
         </span>
       </div>
 
-      {/* Venue + Date */}
+      {/* VENUE + DATE (FIXED TIMEZONE DISPLAY) */}
       <p style={styles.meta}>
-        📍 {match.venue || "TBD"} | 📅 {match.match_date}
+        📍 {match.venue || "TBD"}
+        <br />
+        📅 {localMatchTime}
       </p>
 
-      {/* Countdown */}
-      <p style={{ ...styles.countdown, color: isClosed ? "red" : "green" }}>
+      {/* COUNTDOWN */}
+      <p
+        style={{
+          ...styles.countdown,
+          color: isClosed ? "red" : "green",
+        }}
+      >
         {getCountdown()}
       </p>
 
-      {/* AI Prediction */}
+      {/* AI PREDICTION */}
       <p style={styles.ai}>
         🤖 AI Prediction: {match.aiTeam} ({match.probability}%)
       </p>
 
-      {/* Buttons */}
+      {/* BUTTONS */}
       <div style={styles.buttons}>
-        
         <button
           title={team1.name}
           disabled={isClosed || loading}
           onClick={() => handlePredict(team1.id)}
           style={{ ...styles.btn, background: "#007bff" }}
         >
-          🇦🇹 {team1.short || "Team 1"}
+          {team1.short || "Team 1"}
         </button>
 
-        {/* DRAW BUTTON (FIFA ONLY) */}
+        {/* DRAW BUTTON */}
         {drawAllowed && (
-        <button
+          <button
             disabled={isClosed || loading}
             onClick={handleDraw}
             style={{ ...styles.btn, background: "#6c757d" }}
-        >
+          >
             🤝 Draw
-        </button>
+          </button>
         )}
 
         <button
@@ -142,14 +147,16 @@ export default function FIFAMatchCard({ match, onPredict }) {
           onClick={() => handlePredict(team2.id)}
           style={{ ...styles.btn, background: "#28a745" }}
         >
-          🇧🇪 {team2.short || "Team 2"}
+          {team2.short || "Team 2"}
         </button>
-
       </div>
     </div>
   );
 }
 
+// -------------------------
+// STYLES
+// -------------------------
 const styles = {
   card: {
     background: "#fff",
@@ -203,18 +210,18 @@ const styles = {
     color: "#fff",
     cursor: "pointer",
   },
-  
+
   teams: {
     display: "flex",
     justifyContent: "space-around",
     alignItems: "center",
     marginTop: "10px",
   },
-  
+
   team: {
     textAlign: "center",
   },
-  
+
   logo: {
     width: "60px",
     height: "60px",

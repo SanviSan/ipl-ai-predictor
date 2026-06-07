@@ -767,6 +767,7 @@ def get_teams(tournament: str = None, db: Session = Depends(get_db)):
         for t in teams
     ]
 
+
 @app.get("/matches/upcoming/{tournament}")
 def get_matches_by_tournament(
     tournament: str,
@@ -800,11 +801,22 @@ def get_matches_by_tournament(
         m for m in matches
         if m.match_date.date() == next_date
     ]
+
+    IST = timezone(timedelta(hours=5, minutes=30))
+
     result = []
 
     for m in matches:
+
         team1 = db.query(Team).filter(Team.id == m.team1_id).first()
         team2 = db.query(Team).filter(Team.id == m.team2_id).first()
+
+        # Convert stored IST datetime → UTC
+        match_datetime_utc = (
+            m.match_date
+            .replace(tzinfo=IST)
+            .astimezone(timezone.utc)
+        )
 
         result.append({
             "match_id": m.id,
@@ -823,8 +835,8 @@ def get_matches_by_tournament(
 
             "match_date": m.match_date.strftime("%Y-%m-%d"),
 
-            # temporary
-            "match_datetime": m.match_date.isoformat(),
+            # UTC timestamp sent to frontend
+            "match_datetime": match_datetime_utc.isoformat(),
 
             "venue": m.venue,
 
