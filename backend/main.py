@@ -221,7 +221,9 @@ def predict(pred: schemas.PredictionCreate,
         match_id=pred.match_id,
         predicted_team_id=pred.predicted_team_id,
         is_draw=pred.is_draw,
-        points_awarded=0
+
+        predicted_home_score=pred.predicted_home_score,
+        predicted_away_score=pred.predicted_away_score
     )
 
     db.add(prediction)
@@ -302,6 +304,10 @@ def update_match_result(
 
     match.status = "completed"
 
+    # Save actual score
+    match.team1_score = result.team1_score
+    match.team2_score = result.team2_score
+
     # ---------------------------------------------------
     # GET USERS + PREDICTIONS
     # ---------------------------------------------------
@@ -340,7 +346,7 @@ def update_match_result(
         wrong_points = -10
 
     # ---------------------------------------------------
-    # DRAW CASE (FIFA)
+    # DRAW CASE
     # ---------------------------------------------------
     if getattr(result, "is_draw", False):
 
@@ -353,15 +359,27 @@ def update_match_result(
             if p:
 
                 if p.is_draw:
-                    pts = 10
+                    pts = correct_points
                 else:
-                    pts = -5
+                    pts = wrong_points
 
-                # IMPORTANT
+                # Exact score bonus
+                if (
+                    p.predicted_home_score is not None
+                    and p.predicted_away_score is not None
+                    and result.team1_score is not None
+                    and result.team2_score is not None
+                ):
+                    if (
+                        p.predicted_home_score == result.team1_score
+                        and p.predicted_away_score == result.team2_score
+                    ):
+                        pts += 5
+
                 p.points_awarded = pts
 
             else:
-                pts = -5
+                pts = wrong_points
 
             if is_fifa:
                 u.fifa_points += pts
@@ -372,8 +390,8 @@ def update_match_result(
 
         return {
             "message": "Draw processed",
-            "correct_points": 10,
-            "wrong_points": -5
+            "correct_points": correct_points,
+            "wrong_points": wrong_points
         }
 
     # ---------------------------------------------------
@@ -396,7 +414,19 @@ def update_match_result(
             else:
                 pts = wrong_points
 
-            # IMPORTANT
+            # Exact score bonus
+            if (
+                p.predicted_home_score is not None
+                and p.predicted_away_score is not None
+                and result.team1_score is not None
+                and result.team2_score is not None
+            ):
+                if (
+                    p.predicted_home_score == result.team1_score
+                    and p.predicted_away_score == result.team2_score
+                ):
+                    pts += 5
+
             p.points_awarded = pts
 
         else:

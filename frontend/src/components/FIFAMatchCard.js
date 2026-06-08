@@ -6,11 +6,25 @@ export default function FIFAMatchCard({ match, onPredict }) {
   const team1 = match.team1 || {};
   const team2 = match.team2 || {};
 
+  const [homeScore, setHomeScore] = useState("");
+  const [awayScore, setAwayScore] = useState("");
+
   const matchTime = match.match_datetime || match.match_date;
   const now = new Date();
 
+  const isClosed =
+    matchTime &&
+    new Date(matchTime).getTime() <= now.getTime();
+
+  const drawAllowed =
+    match.stage === "Group Stage";
+
+  const scoreEntered =
+    homeScore !== "" &&
+    awayScore !== "";
+
   // -------------------------
-  // TIME DISPLAY (FIXED)
+  // LOCAL TIME DISPLAY
   // -------------------------
   const localMatchTime = matchTime
     ? new Date(matchTime).toLocaleString(undefined, {
@@ -23,40 +37,72 @@ export default function FIFAMatchCard({ match, onPredict }) {
       })
     : "TBD";
 
-  const isClosed =
-    matchTime && new Date(matchTime).getTime() <= now.getTime();
-
-  const drawAllowed = ["Group Stage"].includes(match.stage);
-
   // -------------------------
-  // COUNTDOWN TIMER
+  // COUNTDOWN
   // -------------------------
   const getCountdown = () => {
     if (!matchTime) return "⏳ Time TBD";
 
-    const diff = new Date(matchTime).getTime() - now.getTime();
+    const diff =
+      new Date(matchTime).getTime() -
+      now.getTime();
 
     if (isNaN(diff)) return "⏳ Time TBD";
-    if (diff <= 0) return "🔒 Predictions Closed";
 
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (diff <= 0) {
+      return "🔒 Predictions Closed";
+    }
+
+    const days = Math.floor(
+      diff / (1000 * 60 * 60 * 24)
+    );
+
+    const hours = Math.floor(
+      (diff % (1000 * 60 * 60 * 24)) /
+      (1000 * 60 * 60)
+    );
+
+    const mins = Math.floor(
+      (diff % (1000 * 60 * 60)) /
+      (1000 * 60)
+    );
+
+    if (days > 0) {
+      return `⏳ ${days}d ${hours}h left`;
+    }
 
     return `⏳ ${hours}h ${mins}m left`;
   };
 
   // -------------------------
-  // PREDICT HANDLER
+  // PREDICT TEAM
   // -------------------------
   const handlePredict = async (teamId) => {
     setLoading(true);
-    await onPredict(match.match_id, teamId);
+
+    await onPredict(
+      match.match_id,
+      teamId,
+      homeScore,
+      awayScore
+    );
+
     setLoading(false);
   };
 
+  // -------------------------
+  // PREDICT DRAW
+  // -------------------------
   const handleDraw = async () => {
     setLoading(true);
-    await onPredict(match.match_id, "DRAW");
+
+    await onPredict(
+      match.match_id,
+      "DRAW",
+      homeScore,
+      awayScore
+    );
+
     setLoading(false);
   };
 
@@ -74,7 +120,10 @@ export default function FIFAMatchCard({ match, onPredict }) {
                 e.target.style.display = "none";
               }}
             />
-            <div>{team1.short} - {team1.name}</div>
+
+            <div>
+              {team1.short} - {team1.name}
+            </div>
           </div>
 
           <h3>VS</h3>
@@ -88,7 +137,10 @@ export default function FIFAMatchCard({ match, onPredict }) {
                 e.target.style.display = "none";
               }}
             />
-            <div>{team2.short} - {team2.name}</div>
+
+            <div>
+              {team2.short} - {team2.name}
+            </div>
           </div>
         </div>
 
@@ -97,7 +149,7 @@ export default function FIFAMatchCard({ match, onPredict }) {
         </span>
       </div>
 
-      {/* VENUE + DATE (FIXED TIMEZONE DISPLAY) */}
+      {/* DATE + VENUE */}
       <p style={styles.meta}>
         📍 {match.venue || "TBD"}
         <br />
@@ -114,28 +166,110 @@ export default function FIFAMatchCard({ match, onPredict }) {
         {getCountdown()}
       </p>
 
-      {/* AI PREDICTION */}
+      {/* AI */}
       <p style={styles.ai}>
-        🤖 AI Prediction: {match.aiTeam} ({match.probability}%)
+        🤖 AI Prediction:{" "}
+        {match.aiTeam} ({match.probability}%)
       </p>
+
+      {/* SCORE PREDICTION */}
+      {!isClosed && (
+        <div style={{ marginTop: "15px" }}>
+          <label
+            style={{
+              fontWeight: "bold",
+            }}
+          >
+            Score Prediction
+          </label>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "10px",
+              marginTop: "10px",
+            }}
+          >
+            <input
+              type="number"
+              min="0"
+              value={homeScore}
+              onChange={(e) =>
+                setHomeScore(e.target.value)
+              }
+              placeholder={team1.short}
+              style={styles.scoreInput}
+            />
+
+            <span
+              style={{
+                fontWeight: "bold",
+                fontSize: "20px",
+              }}
+            >
+              :
+            </span>
+
+            <input
+              type="number"
+              min="0"
+              value={awayScore}
+              onChange={(e) =>
+                setAwayScore(e.target.value)
+              }
+              placeholder={team2.short}
+              style={styles.scoreInput}
+            />
+          </div>
+
+          <p
+            style={{
+              fontSize: "12px",
+              color: "#28a745",
+              marginTop: "8px",
+              textAlign: "center",
+            }}
+          >
+            ⭐ Exact score prediction earns
+            +5 bonus points
+          </p>
+        </div>
+      )}
 
       {/* BUTTONS */}
       <div style={styles.buttons}>
         <button
           title={team1.name}
-          disabled={isClosed || loading}
-          onClick={() => handlePredict(team1.id)}
-          style={{ ...styles.btn, background: "#007bff" }}
+          disabled={
+            isClosed ||
+            loading ||
+            !scoreEntered
+          }
+          onClick={() =>
+            handlePredict(team1.id)
+          }
+          style={{
+            ...styles.btn,
+            background: "#007bff",
+          }}
         >
-          {team1.short || "Team 1"}
+          {team1.short}
         </button>
 
-        {/* DRAW BUTTON */}
         {drawAllowed && (
           <button
-            disabled={isClosed || loading}
+            disabled={
+              isClosed ||
+              loading ||
+              !scoreEntered
+            }
             onClick={handleDraw}
-            style={{ ...styles.btn, background: "#6c757d" }}
+            style={{
+              ...styles.btn,
+              background: "#6c757d",
+            }}
           >
             🤝 Draw
           </button>
@@ -143,20 +277,26 @@ export default function FIFAMatchCard({ match, onPredict }) {
 
         <button
           title={team2.name}
-          disabled={isClosed || loading}
-          onClick={() => handlePredict(team2.id)}
-          style={{ ...styles.btn, background: "#28a745" }}
+          disabled={
+            isClosed ||
+            loading ||
+            !scoreEntered
+          }
+          onClick={() =>
+            handlePredict(team2.id)
+          }
+          style={{
+            ...styles.btn,
+            background: "#28a745",
+          }}
         >
-          {team2.short || "Team 2"}
+          {team2.short}
         </button>
       </div>
     </div>
   );
 }
 
-// -------------------------
-// STYLES
-// -------------------------
 const styles = {
   card: {
     background: "#fff",
@@ -209,6 +349,7 @@ const styles = {
     border: "none",
     color: "#fff",
     cursor: "pointer",
+    fontWeight: "bold",
   },
 
   teams: {
@@ -216,15 +357,26 @@ const styles = {
     justifyContent: "space-around",
     alignItems: "center",
     marginTop: "10px",
+    gap: "20px",
   },
 
   team: {
     textAlign: "center",
+    minWidth: "150px",
   },
 
   logo: {
     width: "60px",
     height: "60px",
     objectFit: "contain",
+  },
+
+  scoreInput: {
+    width: "70px",
+    padding: "8px",
+    textAlign: "center",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
+    fontSize: "16px",
   },
 };

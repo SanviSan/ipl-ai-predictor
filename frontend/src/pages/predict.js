@@ -61,7 +61,12 @@ export default function Predict() {
   };
 
   // Predict API
-  const handlePredict = async (matchId, teamId) => {
+  const handlePredict = async (
+    matchId,
+    teamId,
+    homeScore,
+    awayScore
+  ) => {
     setLoadingPredict(true);
     setError("");
     setResult(null);
@@ -71,8 +76,16 @@ export default function Predict() {
         method: "POST",
         body: JSON.stringify({
           match_id: matchId,
-          predicted_team_id: teamId === "DRAW" ? null : teamId,
-          is_draw: teamId === "DRAW"
+          predicted_team_id:
+            teamId === "DRAW" ? null : teamId,
+        
+          is_draw: teamId === "DRAW",
+        
+          predicted_home_score:
+            homeScore === "" ? null : Number(homeScore),
+        
+          predicted_away_score:
+            awayScore === "" ? null : Number(awayScore)
         }),
       });
 

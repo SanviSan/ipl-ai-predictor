@@ -39,6 +39,8 @@ class Match(Base):
     tournament = Column(String, default="IPL 2026")
     sport = Column(String, default="Cricket")
     stage = Column(String, nullable=True)  # e.g., "Group Stage", "Knockout", "Final"
+    team1_score = Column(Integer, nullable=True)
+    team2_score = Column(Integer, nullable=True)
 
 class Prediction(Base):
     __tablename__ = "predictions"
@@ -56,6 +58,8 @@ class Prediction(Base):
     is_draw = Column(Boolean, default=False)
 
     points_awarded = Column(Integer, default=0)
+    predicted_home_score = Column(Integer, nullable=True)
+    predicted_away_score = Column(Integer, nullable=True)
 
 class TournamentPrediction(Base):
     __tablename__ = "tournament_predictions"

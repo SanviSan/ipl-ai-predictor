@@ -9,12 +9,23 @@ export default function Admin() {
   const { user } = useContext(UserContext);
 
   const isAdmin = user?.isAdmin ?? false;
+  const [scores, setScores] = useState({});
 
   useEffect(() => {
     if (isAdmin) {
       loadMatches();
     }
   }, [isAdmin]);
+
+  const updateScore = (matchId, side, value) => {
+    setScores((prev) => ({
+      ...prev,
+      [matchId]: {
+        ...prev[matchId],
+        [side]: value,
+      },
+    }));
+  };
 
   const loadMatches = async () => {
     try {
@@ -31,15 +42,37 @@ export default function Admin() {
     winnerTeamId = null,
     isDraw = false
   ) => {
+
+     // ✅ ADD THIS CHECK HERE (before API call)
+    if (
+      isDraw &&
+      scores[matchId]?.team1_score !==
+        scores[matchId]?.team2_score
+    ) {
+      alert("Draw requires both scores to be equal");
+      return;
+    }
     try {
       await fetchWithAuth(`/matches/${matchId}/result`, {
         method: "POST",
         body: JSON.stringify({
           winner_team_id: winnerTeamId,
           is_draw: isDraw,
+  
+          team1_score:
+            scores[matchId]?.team1_score != null &&
+            scores[matchId]?.team1_score !== ""
+              ? Number(scores[matchId].team1_score)
+              : null,
+
+          team2_score:
+            scores[matchId]?.team2_score != null &&
+            scores[matchId]?.team2_score !== ""
+              ? Number(scores[matchId].team2_score)
+              : null,
         }),
       });
-
+  
       alert("✅ Result updated");
       loadMatches();
     } catch (err) {
@@ -88,6 +121,58 @@ export default function Admin() {
               {m.tournament}
               {m.stage && ` • ${m.stage}`}
             </p>
+
+            <div
+  style={{
+    display: "flex",
+    gap: "10px",
+    marginTop: "10px",
+    marginBottom: "10px",
+    alignItems: "center",
+  }}
+>
+  <input
+    type="number"
+    min="0"
+    placeholder={m.team1.short}
+    value={scores[m.match_id]?.team1_score || ""}
+    onChange={(e) =>
+      updateScore(
+        m.match_id,
+        "team1_score",
+        e.target.value
+      )
+    }
+    style={{
+      width: "70px",
+      padding: "8px",
+      borderRadius: "6px",
+      border: "1px solid #ccc",
+    }}
+  />
+
+  <span style={{ fontWeight: "bold" }}>:</span>
+
+  <input
+    type="number"
+    min="0"
+    placeholder={m.team2.short}
+    value={scores[m.match_id]?.team2_score || ""}
+    onChange={(e) =>
+      updateScore(
+        m.match_id,
+        "team2_score",
+        e.target.value
+      )
+    }
+    style={{
+      width: "70px",
+      padding: "8px",
+      borderRadius: "6px",
+      border: "1px solid #ccc",
+    }}
+  />
+</div>
 
             <div
               style={{
