@@ -121,8 +121,9 @@ export default function FIFAMatchCard({ match, onPredict }) {
               }}
             />
 
-            <div>
-              {team1.short} - {team1.name}
+            <div style={styles.teamText}>
+              <div>{team1.short}</div>
+              <div style={styles.teamName}>{team1.name}</div>
             </div>
           </div>
 
@@ -138,8 +139,9 @@ export default function FIFAMatchCard({ match, onPredict }) {
               }}
             />
 
-            <div>
-              {team2.short} - {team2.name}
+            <div style={styles.teamText}>
+              <div>{team2.short}</div>
+              <div style={styles.teamName}>{team2.name}</div>
             </div>
           </div>
         </div>
@@ -369,6 +371,18 @@ const styles = {
     width: "60px",
     height: "60px",
     objectFit: "contain",
+  },
+  teamText: {
+    textAlign: "center",
+    maxWidth: "80px",
+  },
+  
+  teamName: {
+    fontSize: "10px",
+    color: "#666",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
 
   scoreInput: {
