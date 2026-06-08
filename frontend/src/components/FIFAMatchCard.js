@@ -74,7 +74,7 @@ export default function FIFAMatchCard({ match, onPredict }) {
                 e.target.style.display = "none";
               }}
             />
-            <div>{team1.short}</div>
+            <div>{team1.short} - {team1.name}</div>
           </div>
 
           <h3>VS</h3>
@@ -88,7 +88,7 @@ export default function FIFAMatchCard({ match, onPredict }) {
                 e.target.style.display = "none";
               }}
             />
-            <div>{team2.short}</div>
+            <div>{team2.short} - {team2.name}</div>
           </div>
         </div>
 

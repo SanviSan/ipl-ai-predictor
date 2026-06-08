@@ -74,7 +74,7 @@ export default function FifaWinnerPrediction() {
                 }}
               >
                 <div style={{ fontWeight: "bold" }}>
-                  {t.short_name || t.name}
+                  {t.short_name } - {t.name}
                 </div>
               </div>
             ))}
