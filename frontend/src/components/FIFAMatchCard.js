@@ -123,7 +123,6 @@ export default function FIFAMatchCard({ match, onPredict }) {
 
             <div style={styles.teamText}>
               <div>{team1.short}</div>
-              <div style={styles.teamName}>{team1.name}</div>
             </div>
           </div>
 
@@ -141,7 +140,6 @@ export default function FIFAMatchCard({ match, onPredict }) {
 
             <div style={styles.teamText}>
               <div>{team2.short}</div>
-              <div style={styles.teamName}>{team2.name}</div>
             </div>
           </div>
         </div>
@@ -166,12 +164,6 @@ export default function FIFAMatchCard({ match, onPredict }) {
         }}
       >
         {getCountdown()}
-      </p>
-
-      {/* AI */}
-      <p style={styles.ai}>
-        🤖 AI Prediction:{" "}
-        {match.aiTeam} ({match.probability}%)
       </p>
 
       {/* SCORE PREDICTION */}
