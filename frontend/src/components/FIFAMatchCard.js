@@ -325,6 +325,8 @@ const styles = {
     fontSize: "13px",
     color: "#666",
     marginTop: "5px",
+    wordBreak: "break-word",
+    lineHeight: "1.4",
   },
 
   countdown: {
@@ -339,13 +341,14 @@ const styles = {
 
   buttons: {
     display: "flex",
-    gap: "10px",
+    gap: "8px",
     marginTop: "15px",
     flexWrap: "wrap",
+    justifyContent: "center",
   },
-
+  
   btn: {
-    flex: 1,
+    flex: "1 1 100px",
     padding: "10px",
     borderRadius: "8px",
     border: "none",
@@ -356,25 +359,25 @@ const styles = {
 
   teams: {
     display: "flex",
-    justifyContent: "space-around",
     alignItems: "center",
-    marginTop: "10px",
-    gap: "20px",
+    justifyContent: "space-between",
+    gap: "10px",
+    width: "100%",
   },
 
   team: {
     textAlign: "center",
-    minWidth: "150px",
+    flex: 1,
+    minWidth: 0,
   },
 
   logo: {
-    width: "60px",
-    height: "60px",
+    width: "50px",
+    height: "50px",
     objectFit: "contain",
   },
   teamText: {
     textAlign: "center",
-    maxWidth: "80px",
   },
   
   teamName: {
@@ -386,7 +389,7 @@ const styles = {
   },
 
   scoreInput: {
-    width: "70px",
+    width: "55px",
     padding: "8px",
     textAlign: "center",
     borderRadius: "6px",
