@@ -641,7 +641,7 @@ def daily_winners(user=Depends(get_current_user), db: Session = Depends(get_db))
 
     for user_id, pts in daily_points.items():
 
-        if pts == max_points:
+        if pts in (10,15):
 
             user_obj = db.query(User).filter(
                 User.id == user_id
