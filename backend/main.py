@@ -561,12 +561,18 @@ def leaderboard(user=Depends(get_current_user), db: Session = Depends(get_db)):
 from datetime import datetime, timedelta
 
 @app.get("/leaderboard/daily")
-def daily_winners(user=Depends(get_current_user), db: Session = Depends(get_db)):
-
-    # Logged-in user
-    db_user = db.query(User).filter(
-        User.id == user["user_id"]
-    ).first()
+def daily_winners(
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # --------------------------------------------------
+    # Logged in user
+    # --------------------------------------------------
+    db_user = (
+        db.query(User)
+        .filter(User.id == user["user_id"])
+        .first()
+    )
 
     if not db_user:
         raise HTTPException(
@@ -574,22 +580,28 @@ def daily_winners(user=Depends(get_current_user), db: Session = Depends(get_db))
             detail="User not found"
         )
 
-    group_id = db_user.group_id
-
-    if not group_id:
+    if not db_user.group_id:
         raise HTTPException(
             status_code=401,
             detail="Missing group"
         )
 
+    group_id = db_user.group_id
+
+    # --------------------------------------------------
     # Users in same group
-    users = db.query(User).filter(
-        User.group_id == group_id
-    ).all()
+    # --------------------------------------------------
+    users = (
+        db.query(User)
+        .filter(User.group_id == group_id)
+        .all()
+    )
 
     user_ids = [u.id for u in users]
 
+    # --------------------------------------------------
     # Latest completed match
+    # --------------------------------------------------
     latest_match = (
         db.query(Match)
         .filter(Match.status == "completed")
@@ -600,59 +612,110 @@ def daily_winners(user=Depends(get_current_user), db: Session = Depends(get_db))
     if not latest_match:
         return []
 
-    # Use only matches from same date
-    match_date = latest_match.match_date.date()
+    match_day = latest_match.match_date.date()
 
-    matches = db.query(Match).filter(
-        Match.status == "completed"
-    ).all()
+    # --------------------------------------------------
+    # All completed matches from same day
+    # --------------------------------------------------
+    matches = (
+        db.query(Match)
+        .filter(Match.status == "completed")
+        .all()
+    )
 
-    match_ids = [
-        m.id
+    daily_matches = [
+        m
         for m in matches
-        if m.match_date.date() == match_date
+        if m.match_date.date() == match_day
     ]
 
-    if not match_ids:
+    if not daily_matches:
         return []
 
-    # Get predictions for those matches
-    predictions = db.query(Prediction).filter(
-        Prediction.match_id.in_(match_ids),
-        Prediction.user_id.in_(user_ids)
-    ).all()
+    response = []
 
-    # Aggregate daily points
-    daily_points = {}
+    # --------------------------------------------------
+    # Process each completed match
+    # --------------------------------------------------
+    for match in daily_matches:
 
-    for p in predictions:
-
-        daily_points[p.user_id] = (
-            daily_points.get(p.user_id, 0)
-            + (p.points_awarded or 0)
+        predictions = (
+            db.query(Prediction)
+            .filter(
+                Prediction.match_id == match.id,
+                Prediction.user_id.in_(user_ids)
+            )
+            .all()
         )
 
-    if not daily_points:
-        return []
+        winners = []
+        exact_score_winners = []
 
-    max_points = max(daily_points.values())
+        for p in predictions:
 
-    winners = []
+            user_obj = (
+                db.query(User)
+                .filter(User.id == p.user_id)
+                .first()
+            )
 
-    for user_id, pts in daily_points.items():
+            if not user_obj:
+                continue
 
-        if pts in (10,15):
+            # ------------------------------------------
+            # Winner prediction correct
+            # ------------------------------------------
+            if (p.points_awarded or 0) > 0:
+                winners.append(user_obj.name)
 
-            user_obj = db.query(User).filter(
-                User.id == user_id
-            ).first()
+            # ------------------------------------------
+            # Exact score bonus
+            # ------------------------------------------
+            if (
+                p.predicted_home_score is not None
+                and p.predicted_away_score is not None
+                and match.team1_score is not None
+                and match.team2_score is not None
+                and p.predicted_home_score == match.team1_score
+                and p.predicted_away_score == match.team2_score
+            ):
+                exact_score_winners.append(
+                    user_obj.name
+                )
 
-            winners.append({
-                "name": user_obj.name,
-                "points": pts
-            })
+        team1 = (
+            db.query(Team)
+            .filter(Team.id == match.team1_id)
+            .first()
+        )
 
-    return winners  
+        team2 = (
+            db.query(Team)
+            .filter(Team.id == match.team2_id)
+            .first()
+        )
+
+        response.append({
+            "match_id": match.id,
+
+            "match_name": (
+                f"{team1.short_name} vs "
+                f"{team2.short_name}"
+            ),
+
+            "team1": team1.short_name,
+            "team2": team2.short_name,
+
+            "team1_score": match.team1_score,
+            "team2_score": match.team2_score,
+
+            "winners": winners,
+
+            "exact_score_winners":
+                exact_score_winners
+        })
+
+    return response  
 
 @app.get("/fifa/standings")
 def fifa_standings(db: Session = Depends(get_db)):
