@@ -232,42 +232,95 @@ def predict(pred: schemas.PredictionCreate,
     return {"message": "Prediction saved"}
 
 @app.get("/matches/{match_id}/votes")
-def get_votes(match_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def get_votes(
+    match_id: int,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
-    db_user = db.query(User).filter(User.id == user["user_id"]).first()
+    db_user = (
+        db.query(User)
+        .filter(User.id == user["user_id"])
+        .first()
+    )
 
     if not db_user:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(
+            status_code=401,
+            detail="User not found"
+        )
 
-    match = db.query(Match).filter(Match.id == match_id).first()
+    match = (
+        db.query(Match)
+        .filter(Match.id == match_id)
+        .first()
+    )
+
     if not match:
-        raise HTTPException(status_code=404, detail="Match not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Match not found"
+        )
 
-    # -------------------------
-    # REMOVE GROUP LOGIC COMPLETELY
-    # -------------------------
-    # (NO match.group_id check because Match doesn't have it)
+    predictions = (
+        db.query(Prediction)
+        .filter(Prediction.match_id == match_id)
+        .all()
+    )
 
-    predictions = db.query(Prediction).filter(
-        Prediction.match_id == match_id
-    ).all()
-
-    team1 = []
-    team2 = []
+    team1_votes = []
+    team2_votes = []
+    draw_votes = []
 
     for p in predictions:
-        u = db.query(User).filter(User.id == p.user_id).first()
-        if not u:
+
+        user_obj = (
+            db.query(User)
+            .filter(User.id == p.user_id)
+            .first()
+        )
+
+        if not user_obj:
             continue
 
-        if p.predicted_team_id == match.team1_id:
-            team1.append(u.name)
+        score_prediction = None
+
+        if (
+            p.predicted_home_score is not None
+            and p.predicted_away_score is not None
+        ):
+            score_prediction = (
+                f"{p.predicted_home_score}-"
+                f"{p.predicted_away_score}"
+            )
+
+        vote_data = {
+            "name": user_obj.name,
+            "score": score_prediction
+        }
+
+        # -------------------------
+        # DRAW
+        # -------------------------
+        if p.is_draw:
+            draw_votes.append(vote_data)
+
+        # -------------------------
+        # TEAM 1
+        # -------------------------
+        elif p.predicted_team_id == match.team1_id:
+            team1_votes.append(vote_data)
+
+        # -------------------------
+        # TEAM 2
+        # -------------------------
         elif p.predicted_team_id == match.team2_id:
-            team2.append(u.name)
+            team2_votes.append(vote_data)
 
     return {
-        "team1": team1,
-        "team2": team2
+        "team1": team1_votes,
+        "draw": draw_votes,
+        "team2": team2_votes
     }
 
 # -------------------------
