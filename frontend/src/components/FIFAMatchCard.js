@@ -77,34 +77,75 @@ export default function FIFAMatchCard({ match, onPredict }) {
   // -------------------------
   // PREDICT TEAM
   // -------------------------
-  const handlePredict = async (teamId) => {
-    setLoading(true);
+  // -------------------------
+// PREDICT TEAM
+// -------------------------
+const handlePredict = async (teamId) => {
 
-    await onPredict(
-      match.match_id,
-      teamId,
-      homeScore,
-      awayScore
-    );
+  const h = Number(homeScore);
+  const a = Number(awayScore);
 
-    setLoading(false);
-  };
+  // Team1 selected
+  if (teamId === team1.id) {
+    if (h <= a) {
+      alert(
+        `Your score prediction (${h}:${a}) does not match ${team1.short} winning.`
+      );
+      return;
+    }
+  }
+
+  // Team2 selected
+  if (teamId === team2.id) {
+    if (a <= h) {
+      alert(
+        `Your score prediction (${h}:${a}) does not match ${team2.short} winning.`
+      );
+      return;
+    }
+  }
+
+  setLoading(true);
+
+  await onPredict(
+    match.match_id,
+    teamId,
+    homeScore,
+    awayScore
+  );
+
+  setLoading(false);
+};
 
   // -------------------------
   // PREDICT DRAW
   // -------------------------
-  const handleDraw = async () => {
-    setLoading(true);
+  // -------------------------
+// PREDICT DRAW
+// -------------------------
+const handleDraw = async () => {
 
-    await onPredict(
-      match.match_id,
-      "DRAW",
-      homeScore,
-      awayScore
+  const h = Number(homeScore);
+  const a = Number(awayScore);
+
+  if (h !== a) {
+    alert(
+      "Draw prediction requires both scores to be equal."
     );
+    return;
+  }
 
-    setLoading(false);
-  };
+  setLoading(true);
+
+  await onPredict(
+    match.match_id,
+    "DRAW",
+    homeScore,
+    awayScore
+  );
+
+  setLoading(false);
+};
 
   return (
     <div style={styles.card}>

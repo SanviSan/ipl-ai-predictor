@@ -199,29 +199,83 @@ def get_upcoming_matches(db: Session = Depends(get_db)):
 # PREDICT
 # -------------------------
 @app.post("/predict")
-def predict(pred: schemas.PredictionCreate,
-            user=Depends(get_current_user),
-            db: Session = Depends(get_db)):
+def predict(
+    pred: schemas.PredictionCreate,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
-    db_user = db.query(User).filter(User.id == user["user_id"]).first()
+    db_user = db.query(User).filter(
+        User.id == user["user_id"]
+    ).first()
 
-    match = db.query(Match).filter(Match.id == pred.match_id).first()
+    match = db.query(Match).filter(
+        Match.id == pred.match_id
+    ).first()
 
-    # existing prediction check
+    if not match:
+        raise HTTPException(
+            status_code=404,
+            detail="Match not found"
+        )
+
+    # -----------------------------------
+    # SCORE VALIDATION
+    # -----------------------------------
+    if (
+        pred.predicted_home_score is not None
+        and pred.predicted_away_score is not None
+    ):
+
+        home = pred.predicted_home_score
+        away = pred.predicted_away_score
+
+        # DRAW
+        if pred.is_draw:
+
+            if home != away:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Draw prediction requires equal scores"
+                )
+
+        # TEAM 1 WIN
+        elif pred.predicted_team_id == match.team1_id:
+
+            if home <= away:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{match.team1.name} win prediction requires team1 score > team2 score"
+                )
+
+        # TEAM 2 WIN
+        elif pred.predicted_team_id == match.team2_id:
+
+            if away <= home:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"{match.team2.name} win prediction requires team2 score > team1 score"
+                )
+
+    # -----------------------------------
+    # EXISTING PREDICTION CHECK
+    # -----------------------------------
     existing = db.query(Prediction).filter(
         Prediction.user_id == db_user.id,
         Prediction.match_id == pred.match_id
     ).first()
 
     if existing:
-        raise HTTPException(status_code=400, detail="Already predicted")
+        raise HTTPException(
+            status_code=400,
+            detail="Already predicted"
+        )
 
     prediction = Prediction(
         user_id=db_user.id,
         match_id=pred.match_id,
         predicted_team_id=pred.predicted_team_id,
         is_draw=pred.is_draw,
-
         predicted_home_score=pred.predicted_home_score,
         predicted_away_score=pred.predicted_away_score
     )
@@ -229,7 +283,9 @@ def predict(pred: schemas.PredictionCreate,
     db.add(prediction)
     db.commit()
 
-    return {"message": "Prediction saved"}
+    return {
+        "message": "Prediction saved"
+    }
 
 @app.get("/matches/{match_id}/votes")
 def get_votes(
