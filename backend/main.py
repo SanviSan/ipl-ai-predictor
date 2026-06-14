@@ -996,13 +996,15 @@ def get_matches_by_tournament(
             Match.status == "scheduled",
             Match.tournament == tournament
         )
+        .order_by(Match.match_date.asc())
+        .limit(4)
         .all()
     )
 
-    matches = [
-        m for m in matches
-        if m.match_date.date() == next_date
-    ]
+    #matches = [
+     #   m for m in matches
+      #  if m.match_date.date() == next_date
+    #]
 
     IST = timezone(timedelta(hours=5, minutes=30))
 
