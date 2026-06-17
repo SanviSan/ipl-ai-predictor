@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
 
-export default function NonVoters({ matchId }) {
+export default function NonVoters({
+  matchId,
+  refreshKey
+}) {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
@@ -18,7 +21,7 @@ export default function NonVoters({ matchId }) {
     };
 
     load();
-  }, [matchId]);
+  }, [matchId, refreshKey]);
 
   if (!users.length) return null;
 

@@ -12,6 +12,7 @@ export default function Predict() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const [predictedMatches, setPredictedMatches] = useState({});
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [now, setNow] = useState(new Date());
   const [tournament, setTournament] = useState("FIFA WC 2026");
@@ -73,6 +74,7 @@ export default function Predict() {
       });
 
       setResult(res);
+      setRefreshKey(prev => prev + 1);
 
       setPredictedMatches((prev) => ({
         ...prev,
@@ -168,7 +170,10 @@ export default function Predict() {
                   />
 
                   <MatchWinners matchId={match.match_id} />
-                  <NonVoters matchId={match.match_id} />
+                  <NonVoters
+                    matchId={match.match_id}
+                    refreshKey={refreshKey}
+                  />
 
                   {isClosed && (
                     <MatchVotes
