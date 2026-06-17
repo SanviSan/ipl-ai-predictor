@@ -11,6 +11,7 @@ export default function Predict() {
   const [loadingPredict, setLoadingPredict] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [predictedMatches, setPredictedMatches] = useState({});
 
   const [now, setNow] = useState(new Date());
   const [tournament, setTournament] = useState("FIFA WC 2026");
@@ -72,6 +73,15 @@ export default function Predict() {
       });
 
       setResult(res);
+
+      setPredictedMatches((prev) => ({
+        ...prev,
+        [matchId]: {
+          teamId,
+          homeScore,
+          awayScore,
+        },
+      }));
     } catch (err) {
       setError(err.message || "Prediction failed");
     } finally {
@@ -80,6 +90,10 @@ export default function Predict() {
   };
 
   const isFIFA = tournament === "FIFA WC 2026";
+
+  const totalMatches = matches.length;
+  const completedPredictions =
+    Object.keys(predictedMatches).length;
 
   return (
     <div style={styles.page}>
@@ -98,6 +112,20 @@ export default function Predict() {
           <option value="IPL 2026">IPL 2026</option>
           <option value="FIFA WC 2026">FIFA WC 2026</option>
         </select>
+      </div>
+
+      <div
+        style={{
+          marginTop: "10px",
+          marginBottom: "15px",
+          padding: "10px",
+          background: "#f8f9fa",
+          borderRadius: "8px",
+          fontWeight: "bold",
+          textAlign: "center",
+        }}
+      >
+        ✅ Predictions Completed: {completedPredictions} / {totalMatches}
       </div>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
@@ -133,8 +161,9 @@ export default function Predict() {
             if (isFIFA) {
               return (
                 <div key={match.match_id} style={styles.cardWrapper}>
-                  <FIFAMatchCard
+                 <FIFAMatchCard
                     match={{ ...match, team1, team2, aiTeam, probability }}
+                    prediction={predictedMatches[match.match_id]}
                     onPredict={handlePredict}
                   />
 

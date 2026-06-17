@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-export default function FIFAMatchCard({ match, onPredict }) {
+export default function FIFAMatchCard({
+  match,
+  onPredict,
+  prediction,
+}) {
   const [loading, setLoading] = useState(false);
 
   const team1 = match.team1 || {};
@@ -206,6 +210,36 @@ const handleDraw = async () => {
       >
         {getCountdown()}
       </p>
+
+      {prediction && (
+      <div
+        style={{
+          marginTop: "10px",
+          padding: "10px",
+          background: "#e8f5e9",
+          border: "1px solid #28a745",
+          borderRadius: "8px",
+          textAlign: "center",
+          fontSize: "14px",
+        }}
+      >
+        ✅ Prediction Saved
+
+        <div style={{ marginTop: "5px" }}>
+          ⚽ Score: {prediction.homeScore} - {prediction.awayScore}
+        </div>
+
+        <div style={{ marginTop: "3px" }}>
+          🎯 Picked: {
+            prediction.teamId === "DRAW"
+              ? "Draw"
+              : prediction.teamId === team1.id
+              ? team1.short
+              : team2.short
+          }
+        </div>
+      </div>
+    )}
 
       {/* SCORE PREDICTION */}
       {!isClosed && (
