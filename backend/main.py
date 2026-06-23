@@ -25,6 +25,16 @@ print("🔥🔥🔥 MAIN.PY LOADED 🔥🔥🔥")
 
 print("🔥 RUNNING FILE:", __file__)
 
+FIFA_PREDICTION_LOCK_DATE = datetime(
+    2026,
+    7,
+    4,
+    0,
+    0,
+    0,
+    tzinfo=timezone.utc
+)
+
 # -------------------------
 # CORS
 # -------------------------
@@ -901,9 +911,17 @@ def fifa_standings(db: Session = Depends(get_db)):
     return result
 
 @app.post("/fifa/predict-winner")
-def predict_winner(data: schemas.TournamentPredictionCreate,
-                    user=Depends(get_current_user),
-                    db: Session = Depends(get_db)):
+def predict_winner(
+    data: schemas.TournamentPredictionCreate,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    
+    if datetime.now(timezone.utc) >= FIFA_PREDICTION_LOCK_DATE:
+        raise HTTPException(
+            status_code=400,
+            detail="Tournament predictions are locked"
+        )
 
     existing = db.query(TournamentPrediction).filter(
         TournamentPrediction.user_id == user["user_id"],
@@ -911,42 +929,118 @@ def predict_winner(data: schemas.TournamentPredictionCreate,
     ).first()
 
     if existing:
-        raise HTTPException(status_code=400, detail="Already predicted")
+        raise HTTPException(
+            status_code=400,
+            detail="Already predicted"
+        )
+    
+    
+
+    # Prevent duplicate selections
+
+    teams = {
+        data.champion_team_id,
+        data.runner_up_team_id,
+        data.third_place_team_id
+    }
+
+    if len(teams) != 3:
+        raise HTTPException(
+            status_code=400,
+            detail="Champion, runner-up and third place must be different teams"
+        )
 
     pred = TournamentPrediction(
         user_id=user["user_id"],
         tournament="FIFA WC 2026",
-        predicted_winner_team_id=data.team_id
+
+        champion_team_id=data.champion_team_id,
+        runner_up_team_id=data.runner_up_team_id,
+        third_place_team_id=data.third_place_team_id
     )
 
     db.add(pred)
     db.commit()
 
-    return {"message": "Prediction saved"}
+    return {
+        "message": "Tournament prediction saved"
+    }
 
 @app.post("/fifa/resolve-winner")
-def resolve_winner(actual_winner_team_id: int,
-                   db: Session = Depends(get_db),
-                   admin=Depends(get_current_admin)):
+def resolve_winner(
+    champion_team_id: int,
+    runner_up_team_id: int,
+    third_place_team_id: int,
+    db: Session = Depends(get_db),
+    admin=Depends(get_current_admin)
+):
 
-    predictions = db.query(TournamentPrediction).all()
+    predictions = db.query(
+        TournamentPrediction
+    ).filter(
+        TournamentPrediction.tournament == "FIFA WC 2026"
+    ).all()
 
     for p in predictions:
 
-        if p.predicted_winner_team_id == actual_winner_team_id:
-            p.is_correct = True
-            p.points_awarded = 100
+        points = 0
 
-            user = db.query(User).filter(User.id == p.user_id).first()
-            user.fifa_points += 100
+        # Champion = 100
 
+        if p.champion_team_id == champion_team_id:
+            p.champion_correct = True
+            points += 100
         else:
-            p.is_correct = False
-            p.points_awarded = 0
+            p.champion_correct = False
+
+        # Runner Up = 50
+
+        if p.runner_up_team_id == runner_up_team_id:
+            p.runner_up_correct = True
+            points += 50
+        else:
+            p.runner_up_correct = False
+
+        # Third Place = 25
+
+        if p.third_place_team_id == third_place_team_id:
+            p.third_place_correct = True
+            points += 25
+        else:
+            p.third_place_correct = False
+
+        p.points_awarded = points
+
+        db_user = db.query(User).filter(
+            User.id == p.user_id
+        ).first()
+
+        if db_user:
+            db_user.fifa_points += points
 
     db.commit()
 
-    return {"message": "FIFA winner resolved"}
+    return {
+        "message": "Tournament predictions resolved"
+    }
+
+@app.get("/fifa/my-prediction")
+def my_prediction(
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    prediction = db.query(
+        TournamentPrediction
+    ).filter(
+        TournamentPrediction.user_id == user["user_id"],
+        TournamentPrediction.tournament == "FIFA WC 2026"
+    ).first()
+
+    if not prediction:
+        return None
+
+    return prediction
 
 @app.get("/teams")
 def get_teams(tournament: str = None, db: Session = Depends(get_db)):
@@ -997,7 +1091,7 @@ def get_matches_by_tournament(
             Match.tournament == tournament
         )
         .order_by(Match.match_date.asc())
-        .limit(4)
+        .limit(8)
         .all()
     )
 

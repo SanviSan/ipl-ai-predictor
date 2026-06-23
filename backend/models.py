@@ -65,8 +65,28 @@ class TournamentPrediction(Base):
     __tablename__ = "tournament_predictions"
 
     id = Column(Integer, primary_key=True)
+
     user_id = Column(Integer, ForeignKey("users.id"))
-    tournament = Column(String)  # "FIFA WC 2026"
-    predicted_winner_team_id = Column(Integer)
-    is_correct = Column(Boolean, default=False)
+
+    tournament = Column(String)
+
+    champion_team_id = Column(
+        Integer,
+        ForeignKey("teams.id")
+    )
+
+    runner_up_team_id = Column(
+        Integer,
+        ForeignKey("teams.id")
+    )
+
+    third_place_team_id = Column(
+        Integer,
+        ForeignKey("teams.id")
+    )
+
+    champion_correct = Column(Boolean, default=False)
+    runner_up_correct = Column(Boolean, default=False)
+    third_place_correct = Column(Boolean, default=False)
+
     points_awarded = Column(Integer, default=0)

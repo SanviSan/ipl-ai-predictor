@@ -27,7 +27,19 @@ class MatchResultUpdate(BaseModel):
 
 class TournamentPredictionCreate(BaseModel):
     tournament: str = "FIFA WC 2026"
-    team_id: int
+
+    champion_team_id: int
+    runner_up_team_id: int
+    third_place_team_id: int
+
+class TournamentPredictionResponse(BaseModel):
+    tournament: str
+
+    champion_team_id: int
+    runner_up_team_id: int
+    third_place_team_id: int
+
+    points_awarded: int = 0
     
 class TeamBase(BaseModel):
     name: str
