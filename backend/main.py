@@ -1091,7 +1091,7 @@ def get_matches_by_tournament(
             Match.tournament == tournament
         )
         .order_by(Match.match_date.asc())
-        .limit(8)
+        .limit(6)
         .all()
     )
 
