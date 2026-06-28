@@ -11,15 +11,44 @@ export default function FifaWinnerPrediction() {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [myPrediction, setMyPrediction] = useState(null);
 
   useEffect(() => {
     const loadTeams = async () => {
       try {
         const data = await fetchWithAuth(
-          "/teams?tournament=FIFA WC 2026"
+          "/fifa/qualified-teams"
         );
 
         setTeams(data || []);
+        try {
+
+          const prediction = await fetchWithAuth(
+            "/fifa/my-prediction"
+          );
+        
+          if (prediction) {
+        
+            setMyPrediction(prediction);
+        
+            setChampion(
+              prediction.champion_team_id.toString()
+            );
+        
+            setRunnerUp(
+              prediction.runner_up_team_id.toString()
+            );
+        
+            setThirdPlace(
+              prediction.third_place_team_id.toString()
+            );
+        
+            setSaved(true);
+          }
+        
+        } catch (err) {
+          console.log("No existing prediction");
+        }
       } catch (err) {
         console.error(err);
         setError("Failed to load teams");
@@ -52,6 +81,7 @@ export default function FifaWinnerPrediction() {
       setError("");
 
       await fetchWithAuth("/fifa/predict-winner", {
+
         method: "POST",
         body: JSON.stringify({
           champion_team_id: Number(champion),
@@ -60,6 +90,8 @@ export default function FifaWinnerPrediction() {
         }),
       });
 
+      const prediction = await fetchWithAuth("/fifa/my-prediction");
+      setMyPrediction(prediction);
       setSaved(true);
 
     } catch (err) {
@@ -93,13 +125,13 @@ export default function FifaWinnerPrediction() {
       <div style={styles.pointsBox}>
         <h4>Points Available</h4>
 
-        <p>🏆 Champion = 100 pts</p>
-        <p>🥈 Runner Up = 50 pts</p>
-        <p>🥉 Third Place = 25 pts</p>
+        <p>🏆 Champion = 30 pts</p>
+        <p>🥈 Runner Up = 20 pts</p>
+        <p>🥉 Third Place = 10 pts</p>
 
         <hr />
 
-        <b>Maximum = 175 points</b>
+        <b>Maximum = 60 points</b>
       </div>
 
       {error && (

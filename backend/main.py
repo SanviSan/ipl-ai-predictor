@@ -985,27 +985,27 @@ def resolve_winner(
 
         points = 0
 
-        # Champion = 100
+        # Champion = 30
 
         if p.champion_team_id == champion_team_id:
             p.champion_correct = True
-            points += 100
+            points += 30
         else:
             p.champion_correct = False
 
-        # Runner Up = 50
+        # Runner Up = 20
 
         if p.runner_up_team_id == runner_up_team_id:
             p.runner_up_correct = True
-            points += 50
+            points += 20
         else:
             p.runner_up_correct = False
 
-        # Third Place = 25
+        # Third Place = 10
 
         if p.third_place_team_id == third_place_team_id:
             p.third_place_correct = True
-            points += 25
+            points += 10
         else:
             p.third_place_correct = False
 
@@ -1148,5 +1148,54 @@ def get_matches_by_tournament(
 
     return result
 
+@app.get("/fifa/qualified-teams")
+def get_qualified_teams(db: Session = Depends(get_db)):
 
-    
+    matches = (
+        db.query(Match)
+        .filter(
+            Match.tournament == "FIFA WC 2026",
+            Match.stage == "Round of 32",
+        )
+        .all()
+    )
+
+    team_ids = set()
+
+    for m in matches:
+        team_ids.add(m.team1_id)
+        team_ids.add(m.team2_id)
+
+    teams = (
+        db.query(Team)
+        .filter(Team.id.in_(team_ids))
+        .order_by(Team.name)
+        .all()
+    )
+
+    return teams
+
+@app.get("/fifa/my-prediction")
+def get_my_prediction(
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+
+    prediction = (
+        db.query(TournamentPrediction)
+        .filter(
+            TournamentPrediction.user_id == user["user_id"],
+            TournamentPrediction.tournament == "FIFA WC 2026"
+        )
+        .first()
+    )
+
+    if not prediction:
+        return None
+
+    return {
+        "champion_team_id": prediction.champion_team_id,
+        "runner_up_team_id": prediction.runner_up_team_id,
+        "third_place_team_id": prediction.third_place_team_id,
+        "points_awarded": prediction.points_awarded
+    }
