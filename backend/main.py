@@ -28,7 +28,7 @@ print("🔥 RUNNING FILE:", __file__)
 FIFA_PREDICTION_LOCK_DATE = datetime(
     2026,
     7,
-    4,
+    5,
     0,
     0,
     0,
