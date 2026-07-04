@@ -11,9 +11,16 @@ export default function Admin() {
   const isAdmin = user?.isAdmin ?? false;
   const [scores, setScores] = useState({});
 
+  const [qualifiedTeams, setQualifiedTeams] = useState([]);
+
+  const [champion, setChampion] = useState("");
+  const [runnerUp, setRunnerUp] = useState("");
+  const [thirdPlace, setThirdPlace] = useState("");
+
   useEffect(() => {
     if (isAdmin) {
       loadMatches();
+      loadQualifiedTeams();
     }
   }, [isAdmin]);
 
@@ -34,6 +41,18 @@ export default function Admin() {
     } catch (err) {
       console.error(err);
       alert("Failed to load matches");
+    }
+  };
+  
+  const loadQualifiedTeams = async () => {
+    try {
+      const data = await fetchWithAuth(
+        "/fifa/qualified-teams"
+      );
+  
+      setQualifiedTeams(data || []);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -78,6 +97,52 @@ export default function Admin() {
     } catch (err) {
       console.error(err);
       alert("❌ Failed to update result");
+    }
+  };
+
+  const resolveTournament = async () => {
+
+    if (!champion || !runnerUp || !thirdPlace) {
+      alert("Please select Champion, Runner Up and Third Place");
+      return;
+    }
+  
+    if (
+      champion === runnerUp ||
+      champion === thirdPlace ||
+      runnerUp === thirdPlace
+    ) {
+      alert("All three teams must be different.");
+      return;
+    }
+  
+    const confirmResolve = window.confirm(
+      "This will permanently award FIFA Tournament points.\n\nContinue?"
+    );
+  
+    if (!confirmResolve) return;
+  
+    try {
+  
+      await fetchWithAuth(
+        "/admin/fifa/resolve-tournament",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            champion_team_id: Number(champion),
+            runner_up_team_id: Number(runnerUp),
+            third_place_team_id: Number(thirdPlace),
+          }),
+        }
+      );
+  
+      alert("🏆 Tournament resolved successfully.");
+  
+    } catch (err) {
+  
+      console.error(err);
+  
+      alert("Failed to resolve tournament.");
     }
   };
 
@@ -243,6 +308,104 @@ export default function Admin() {
           </div>
         );
       })}
+
+    <hr style={{ margin: "40px 0" }} />
+
+    <h2>🏆 Resolve FIFA Tournament</h2>
+
+    <p>
+    Award tournament prediction points once the World Cup finishes.
+    </p>
+
+    <div style={{ marginBottom: "15px" }}>
+
+      <label><b>Champion</b></label>
+
+      <select
+        value={champion}
+        onChange={(e)=>setChampion(e.target.value)}
+        style={{display:"block",width:"300px",padding:"8px"}}
+      >
+
+        <option value="">Select Champion</option>
+
+        {qualifiedTeams.map(team=>(
+          <option
+            key={team.id}
+            value={team.id}
+          >
+            {team.short_name} - {team.name}
+          </option>
+        ))}
+
+      </select>
+
+    </div>
+
+    <div style={{ marginBottom: "15px" }}>
+
+      <label><b>Runner Up</b></label>
+
+      <select
+        value={runnerUp}
+        onChange={(e)=>setRunnerUp(e.target.value)}
+        style={{display:"block",width:"300px",padding:"8px"}}
+      >
+
+        <option value="">Select Runner Up</option>
+
+        {qualifiedTeams.map(team=>(
+          <option
+            key={team.id}
+            value={team.id}
+          >
+            {team.short_name} - {team.name}
+          </option>
+        ))}
+
+      </select>
+
+    </div>
+
+    <div style={{ marginBottom: "20px" }}>
+
+      <label><b>Third Place</b></label>
+
+      <select
+        value={thirdPlace}
+        onChange={(e)=>setThirdPlace(e.target.value)}
+        style={{display:"block",width:"300px",padding:"8px"}}
+      >
+
+        <option value="">Select Third Place</option>
+
+        {qualifiedTeams.map(team=>(
+          <option
+            key={team.id}
+            value={team.id}
+          >
+            {team.short_name} - {team.name}
+          </option>
+        ))}
+
+      </select>
+
+    </div>
+
+    <button
+      onClick={resolveTournament}
+      style={{
+        background:"#dc3545",
+        color:"#fff",
+        padding:"12px 24px",
+        border:"none",
+        borderRadius:"8px",
+        cursor:"pointer",
+        fontWeight:"bold"
+      }}
+    >
+    Resolve Tournament Predictions
+    </button>
     </div>
   );
 }

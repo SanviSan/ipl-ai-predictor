@@ -45,3 +45,8 @@ class TeamBase(BaseModel):
     name: str
     short_name: str
     tournament: str | None = None
+
+class TournamentResult(BaseModel):
+    champion_team_id: int
+    runner_up_team_id: int
+    third_place_team_id: int

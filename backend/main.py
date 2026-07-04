@@ -444,7 +444,6 @@ def update_match_result(
     if match.sport == "football":
 
         knockout_stages = [
-            "Round of 16",
             "Quarter Final",
             "Quarter Finals",
             "Semi Final",
@@ -453,16 +452,16 @@ def update_match_result(
         ]
 
         if match.stage in knockout_stages:
-            correct_points = 25
-            wrong_points = -10
+            correct_points = 15
+            wrong_points = -5
         else:
             correct_points = 10
             wrong_points = -5
 
     else:
         # IPL
-        correct_points = 25
-        wrong_points = -10
+        correct_points = 15
+        wrong_points = -5
 
     # ---------------------------------------------------
     # DRAW CASE
@@ -966,62 +965,68 @@ def predict_winner(
         "message": "Tournament prediction saved"
     }
 
-@app.post("/fifa/resolve-winner")
-def resolve_winner(
-    champion_team_id: int,
-    runner_up_team_id: int,
-    third_place_team_id: int,
+@app.post("/admin/fifa/resolve-tournament")
+def resolve_tournament(
+    result: schemas.TournamentResult,
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
 
-    predictions = db.query(
-        TournamentPrediction
-    ).filter(
-        TournamentPrediction.tournament == "FIFA WC 2026"
-    ).all()
+    predictions = (
+        db.query(TournamentPrediction)
+        .filter(
+            TournamentPrediction.tournament == "FIFA WC 2026"
+        )
+        .all()
+    )
 
     for p in predictions:
 
         points = 0
 
-        # Champion = 30
-
-        if p.champion_team_id == champion_team_id:
+        # Champion (30 pts)
+        if p.champion_team_id == result.champion_team_id:
             p.champion_correct = True
             points += 30
         else:
             p.champion_correct = False
 
-        # Runner Up = 20
-
-        if p.runner_up_team_id == runner_up_team_id:
+        # Runner Up (20 pts)
+        if p.runner_up_team_id == result.runner_up_team_id:
             p.runner_up_correct = True
             points += 20
         else:
             p.runner_up_correct = False
 
-        # Third Place = 10
-
-        if p.third_place_team_id == third_place_team_id:
+        # Third Place (10 pts)
+        if p.third_place_team_id == result.third_place_team_id:
             p.third_place_correct = True
             points += 10
         else:
             p.third_place_correct = False
 
-        p.points_awarded = points
-
-        db_user = db.query(User).filter(
-            User.id == p.user_id
-        ).first()
+        db_user = (
+            db.query(User)
+            .filter(User.id == p.user_id)
+            .first()
+        )
 
         if db_user:
+
+            # Remove previously awarded tournament points
+            db_user.fifa_points -= p.points_awarded
+
+            # Save new tournament points
+            p.points_awarded = points
+
+            # Add new tournament points
             db_user.fifa_points += points
 
     db.commit()
 
     return {
-        "message": "Tournament predictions resolved"
+        "message": "Tournament predictions resolved successfully",
+        "users_processed": len(predictions)
     }
 
 @app.get("/fifa/my-prediction")
@@ -1155,7 +1160,7 @@ def get_qualified_teams(db: Session = Depends(get_db)):
         db.query(Match)
         .filter(
             Match.tournament == "FIFA WC 2026",
-            Match.stage == "Round of 32",
+            Match.stage == "Round of 16",
         )
         .all()
     )
