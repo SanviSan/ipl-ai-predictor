@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchWithAuth } from "../api/api";
+import TournamentPredictions from "../components/TournamentPredictions";
 
 export default function FifaWinnerPrediction() {
   const [teams, setTeams] = useState([]);
@@ -253,7 +254,10 @@ export default function FifaWinnerPrediction() {
           </button>
         </>
       )}
+
+    <TournamentPredictions />
     </div>
+
   );
 }
 

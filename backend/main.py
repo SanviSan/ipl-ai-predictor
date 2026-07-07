@@ -59,6 +59,35 @@ def get_db():
     finally:
         db.close()
 
+@app.get("/fifa/tournament-predictions")
+def tournament_predictions(
+    db: Session = Depends(get_db)
+):
+
+    predictions = db.query(
+        TournamentPrediction
+    ).all()
+
+    teams = {
+        t.id: t.short_name
+        for t in db.query(Team).all()
+    }
+
+    users = {
+        u.id: u.name
+        for u in db.query(User).all()
+    }
+
+    return [
+        {
+            "user": users[p.user_id],
+            "champion": teams[p.champion_team_id],
+            "runner_up": teams[p.runner_up_team_id],
+            "third_place": teams[p.third_place_team_id],
+        }
+        for p in predictions
+    ]
+
 # -------------------------
 # AUTH HELPERS
 # -------------------------
