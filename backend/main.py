@@ -572,7 +572,7 @@ def update_match_result(
                     p.predicted_home_score == result.team1_score
                     and p.predicted_away_score == result.team2_score
                 ):
-                    pts += 5
+                    pts += 10
 
             p.points_awarded = pts
 

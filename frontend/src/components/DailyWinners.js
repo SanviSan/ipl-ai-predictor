@@ -64,7 +64,7 @@ export default function DailyWinners({
               0 && (
               <div>
                 <b>
-                  ⭐ Exact Score (+5)
+                  ⭐ Exact Score (+10)
                 </b>
 
                 <ul>
