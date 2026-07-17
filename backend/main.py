@@ -477,6 +477,7 @@ def update_match_result(
             "Quarter Finals",
             "Semi Final",
             "Semi Finals",
+            "Third Place Playoff",
             "Final"
         ]
 
